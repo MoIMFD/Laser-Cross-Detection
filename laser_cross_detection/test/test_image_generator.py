@@ -1,7 +1,5 @@
 import numpy as np
 import cv2
-from skimage import transform
-import matplotlib.pyplot as plt
 
 from dataclasses import dataclass
 from collections import namedtuple
@@ -114,3 +112,35 @@ def add_perlin_noise(image, noise, threshold=0.8):
 def perlin_noise(seed=0, shape=(2048, 2048), res=(64, 64), octaves=5):
     np.random.seed(seed)
     return perlin2d.generate_fractal_noise_2d(shape, res, octaves)
+
+
+def make_noisy_image(
+    width, height, beam_width, angle1, angle2=0, beam_nosie=0.05, seed=0
+):
+    b = BeamImageGenerator((height, width))
+    beam_profile = b.gaussian_beam_profile(beam_width)
+    image = b.make_crossing_beams(
+        angle1,
+        beam_profile,
+        angle2,
+        beam_profile,
+        gaussian_noise_level=beam_nosie,
+    )
+    noise = perlin_noise(seed=seed, res=(64, 64))
+    image = mask_perlin_noise(image, noise)
+    noise = perlin_noise(seed=seed, res=(128, 128))
+    image = add_perlin_noise(image, noise)
+    image = salt_and_pepper_noise(
+        image,
+        0.5,
+        0.04,
+    )
+    image = cv2.GaussianBlur(image, (5, 5), 1.5, 1.5)
+    return (image * 255).astype(np.uint8)
+
+
+def make_noisefree_image(width, height, beam_width, angle1, angle2=0):
+    b = BeamImageGenerator((height, width))
+    beam_profile = b.gaussian_beam_profile(beam_width)
+    image = b.make_crossing_beams(angle1, beam_profile, angle2, beam_profile)
+    return (image * 255).astype(np.uint8)
