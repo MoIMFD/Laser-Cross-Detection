@@ -8,6 +8,15 @@ TWOPI = np.pi * 2
 PI_HALF = np.pi / 2
 
 
+def norm_vector(v):
+    return v / np.linalg.norm(v)
+
+
+def distance_line_point(p1, p2, p):
+    p1, p2, p = np.array([p1, p2, p])
+    return np.linalg.norm(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
+
+
 def get_intersect(a1, a2, b1, b2):
     """
     Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
@@ -46,8 +55,22 @@ class HessNormalLine:
         return cls(distance, np.deg2rad(angle), center=center)
 
     @classmethod
+    def from_direction(cls, p1, direction, center=(0, 0)):
+        p2 = np.add(p1, direction)
+        angle = np.arctan2(*direction[::-1])
+        distance = distance_line_point(p1, p2, center)
+        return cls(distance, angle, center=center)
+
+    @classmethod
+    def from_normal(cls, normal, center=(0, 0)):
+        direction = -normal[1], normal[0]
+        point = np.add(center, normal)
+        return cls.from_direction(point, direction, center)
+
+    @classmethod
     def from_two_points(cls, p1, p2, center=(0, 0)):
-        raise NotImplementedError()
+        p1, p2 = np.array(p1), np.array(p2)
+        return cls.from_direction(p1, p2 - p1, center)
 
     @property
     def normal_point(self) -> np.ndarray:
