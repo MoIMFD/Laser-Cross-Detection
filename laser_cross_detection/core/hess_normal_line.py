@@ -55,6 +55,14 @@ class HessNormalLine:
         return cls(distance, np.deg2rad(angle), center=center)
 
     @classmethod
+    def from_intercept_and_slope(cls, intercept, slope, center=(0, 0)):
+        """Define a line from intercept and slope. The distance is calculated
+        from the triangle formed by the intercept, origin and angel (slope)."""
+        angle = np.arctan(slope)
+        distance = np.sin(angle) * intercept
+        return cls(distance, angle, center=center)
+
+    @classmethod
     def from_direction(cls, p1, direction, center=(0, 0)):
         p2 = np.add(p1, direction)
         angle = np.arctan2(*direction[::-1])
@@ -90,8 +98,8 @@ class HessNormalLine:
             [np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)]
         )
 
-    def plot_slope(self, ax, *args, **kwds):
-        ax.axline(self.normal_point, slope=self.slope, *args, **kwds)
+    def plot_slope(self, axis, *args, **kwds):
+        return axis.axline(self.normal_point, slope=self.slope, *args, **kwds)
 
     def interscet_nplinalg(self, other) -> np.ndarray:
         """Calculate the intersection of two instances solving the linear

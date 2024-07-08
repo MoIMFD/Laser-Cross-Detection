@@ -1,9 +1,17 @@
+import cv2
 import numpy as np
+import matplotlib.pyplot as plt
+
+from scipy.sparse import csr_matrix
+from sklearn import linear_model
+
+from .detection_abc import DetectionMethodABC
+from . import HessNormalLine
 
 
-class Ransac:
-    def compute(self, arr, *args, **kwargs):
-        arr_copy = np.copy(arr)
+class Ransac(DetectionMethodABC):
+    def __call__(self, arr, *args, **kwargs):
+        # arr_copy = np.copy(arr)
         # gaussian filter & binarize image/array
         arr = Ransac.__preprocess(arr)
 
@@ -31,26 +39,19 @@ class Ransac:
             plot()
             return None, None
         # calc intersection point
-        x_intersect = (intrcpt_2 - intrcpt_1) / (coef_1 - coef_2)
-        y_intersect = coef_1 * x_intersect + intrcpt_1
+        line1 = HessNormalLine.from_intercept_and_slope(intrcpt_1, coef_1)
+        line2 = HessNormalLine.from_intercept_and_slope(intrcpt_2, coef_2)
 
-        if not CommonFunctions.test_reasonable_position(
-            arr=arr_copy, x=x_intersect, y=y_intersect
-        ):
-            x_intersect, y_intersect = (
-                -9,
-                -9,
-            )  # is removed later in the core routines
-        return x_intersect, y_intersect
+        return line1.intersect_crossprod(line2)
 
     @classmethod
     def __preprocess(self, arr):
-        blur = cv.GaussianBlur(arr, (5, 5), 0)
-        _, arr = cv.threshold(
+        blur = cv2.GaussianBlur(arr, (5, 5), 0)
+        _, arr = cv2.threshold(
             np.array(blur, dtype=np.uint16),
             0,
             255,
-            cv.THRESH_BINARY + cv.THRESH_OTSU,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
         )
         arr = arr.astype(bool)
         return arr
