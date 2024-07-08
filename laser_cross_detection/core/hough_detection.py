@@ -1,5 +1,22 @@
-class Hough:
-    def compute(self, arr, *args, **kwargs):
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+from skimage.transform import (
+    hough_line,
+    probabilistic_hough_line,
+    hough_line_peaks,
+)
+
+
+from .hess_normal_line import HessNormalLine
+from .detection_abc import DetectionMethodABC
+from ..utils import image_utils
+
+PI = np.pi
+
+
+class Hough(DetectionMethodABC):
+    def __call__(self, arr, *args, **kwargs):
         arr_copy = np.copy(arr)
         arr = self.__preprocess(arr=arr)
         lines = probabilistic_hough_line(arr, threshold=100)
@@ -9,15 +26,15 @@ class Hough:
         for line in lines:
             p0, p1 = line
             d_x, d_y = p1[0] - p0[0], p1[1] - p0[1]
-            angles.append(atan2(d_y, d_x))
+            angles.append(np.arctan2(d_y, d_x))
         angles = np.array(angles)
         # angles, close to pi, get pi subtracted to be close to 0
         # -> that is a problem when there are horizontal lines, as these can either be 0 or pi
         angles[
             np.logical_and(
-                angles > pi - pi / 180 * 5, angles < pi + pi / 180 * 5
+                angles > PI - PI / 180 * 5, angles < PI + PI / 180 * 5
             )
-        ] -= pi
+        ] -= PI
         angles = np.abs(angles)
         div_value = (np.min(angles) + np.max(angles)) / 2
 
@@ -31,13 +48,9 @@ class Hough:
                 x2, y2 = line_1[1]
                 x3, y3 = line_2[0]
                 x4, y4 = line_2[1]
-                # px = ((x1*y2-y1*x2)*(x3-x4)-(x1-x2)*(x3*y4-y3*x4)) / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-                # py = ((x1*y2-y1*x2)*(y3-y4)-(y1-y2)*(x3*y4-y3*x4)) / ((x1-x2)*(y3-y4)-(y1-y2)*(x3-x4))
-                #        # source: https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
-                px, py = self.__calc_intersection(
-                    x1=x1, y1=y1, x2=x2, y2=y2, x3=x3, y3=y3, x4=x4, y4=y4
-                )
-                intrsctn_pnts.append([px, py])
+                line1 = HessNormalLine.from_two_points((x1, y1), (x2, y2))
+                line2 = HessNormalLine.from_two_points((x3, y3), (x4, y4))
+                intrsctn_pnts.append(line1.intersect_crossprod(line2))
 
         intrsctn_pnts = np.array(intrsctn_pnts, dtype=np.float64)
 
@@ -45,33 +58,17 @@ class Hough:
 
         hor = np.mean(intrsctn_pnts, axis=0)[0]
         ver = np.mean(intrsctn_pnts, axis=0)[1]
-
-        if (
-            np.isnan(hor)
-            or np.isnan(ver)
-            or not CommonFunctions.test_reasonable_position(
-                arr=arr_copy, x=hor, y=ver
-            )
-        ):
-            hor, ver = -9, -9  # is removed later in the core routines
         return hor, ver
 
     @classmethod
-    def __calc_intersection(self, x1, y1, x2, y2, x3, y3, x4, y4):
-        # Calculate the slope of the first line
-
-        return calculate_intersection_of_lines(
-            (x1, y1), (x2, y2), (x3, y3), (x4, y4)
-        )
-
-    @classmethod
     def __preprocess(self, arr):
-        blur = cv.GaussianBlur(arr, (5, 5), 0)
-        _, arr = cv.threshold(
+        arr = cv2.convertScaleAbs(arr)
+        blur = cv2.GaussianBlur(arr, (5, 5), 0)
+        _, arr = cv2.threshold(
             np.array(blur, dtype=np.uint16),
             0,
             255,
-            cv.THRESH_BINARY + cv.THRESH_OTSU,
+            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
         )
         arr = arr.astype(bool)
         return arr
