@@ -93,10 +93,10 @@ class BeamImageGenerator:
         return gaussian(x, x0, width)
 
 
-def mask_perlin_noise(image, noise, threshold=0.8):
+def mask_perlin_noise(image, noise, threshold=0.2):
     image = image.copy()
     noise = noise[: image.shape[0], : image.shape[1]]
-    mask = np.abs(noise) < 0.2
+    mask = np.abs(noise) < threshold
     image[mask] = 0
     return image
 

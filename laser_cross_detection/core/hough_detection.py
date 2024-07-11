@@ -58,7 +58,7 @@ class Hough(DetectionMethodABC):
 
         hor = np.mean(intrsctn_pnts, axis=0)[0]
         ver = np.mean(intrsctn_pnts, axis=0)[1]
-        return hor, ver
+        return np.array([hor, ver])
 
     @classmethod
     def __preprocess(self, arr):
