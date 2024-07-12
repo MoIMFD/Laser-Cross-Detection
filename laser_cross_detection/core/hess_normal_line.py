@@ -58,14 +58,14 @@ class HessNormalLine:
     def from_intercept_and_slope(cls, intercept, slope, center=(0, 0)):
         """Define a line from intercept and slope. The distance is calculated
         from the triangle formed by the intercept, origin and angel (slope)."""
-        angle = np.arctan(slope)
+        angle = np.pi / 2 - np.arctan(-slope)
         distance = np.sin(angle) * intercept
         return cls(distance, angle, center=center)
 
     @classmethod
     def from_direction(cls, p1, direction, center=(0, 0)):
         p2 = np.add(p1, direction)
-        angle = np.arctan2(*direction[::-1])
+        angle = -np.arctan2(*direction[::-1])
         distance = distance_line_point(p1, p2, center)
         return cls(distance, angle, center=center)
 

@@ -33,15 +33,44 @@ def salt_and_pepper_noise(image, s_vs_p, amount, scale=1.0):
     return image
 
 
+def make_beam_image(
+    width: int,
+    height: int,
+    theta: float,
+    rho: float,
+    beam_width: float,
+    scale: float = 1.0,
+):
+    """Creates an image of with dimension width times height containing a line
+    with a gaussian profile. The line is specified in Hess-Normal-Form, angle
+    theta and radius rho (distance from center). The width of the beam is
+    defined via beam_width. Per default the intensity values of the returned
+    image are between 0 and 1, but can be scaled via the scale argument.
+
+    Implementation based on https://doi.org/10.1016/j.jvcir.2013.09.007 Eq. 7
+    """
+    x, y = np.mgrid[:width, :height]  # build coordinates
+    theta = np.deg2rad(theta)
+    image = np.exp(
+        -(
+            (
+                (x - width / 2) * np.cos(theta)
+                + (y - height / 2) * np.sin(theta)
+                - rho
+            )
+            ** 2
+        )
+        / ((beam_width / 2) ** 2)
+    )
+    return scale * image
+
+
 @dataclass
 class BeamImageGenerator:
     dimension: ImageDimension
-    # profile_function: callable
 
     def __post_init__(self):
         self.dimension = ImageDimension(*self.dimension)
-        assert self.dimension.height % 2 != 0, "dimension must be odd"
-        assert self.dimension.width % 2 != 0, "dimension must be odd"
         self.extend = int(2**0.5 * self.dimension.width // 2 + 1)
         self.extended_dimension = ImageDimension(
             self.dimension.height, self.dimension.width + 2 * self.extend
@@ -49,34 +78,31 @@ class BeamImageGenerator:
 
     @property
     def center(self):
-        return self.dimension.height // 2, self.dimension.width // 2
+        return self.dimension.height / 2, self.dimension.width / 2
 
-    def make_beam_image(self, angle, beam_profile):
-        beam_image = beam_profile[:, np.newaxis] * np.ones(
-            self.extended_dimension
+    def make_beam_image(self, angle, rho, beam_width):
+        return make_beam_image(
+            width=self.dimension.width,
+            height=self.dimension.height,
+            theta=angle,
+            rho=rho,
+            beam_width=beam_width,
         )
-        if angle == 0:
-            return beam_image[:, self.extend : -self.extend]
-        else:
-            # return rotate_image(beam_image, angle)[
-            #     :, self.extend : -self.extend
-            # ]
-            return image_utils.rotate_image(beam_image, angle, impl="skimage")[
-                :, self.extend : -self.extend
-            ]
 
     def make_crossing_beams(
         self,
         angle1,
-        beam_profile1,
+        rho1,
+        beam_width1,
         angle2,
-        beam_profile2,
+        rho2,
+        beam_width2,
         gaussian_noise_level=0,
         seed=0,
     ):
         np.random.seed(seed)
-        beam_image1 = self.make_beam_image(angle1, beam_profile1)
-        beam_image2 = self.make_beam_image(angle2, beam_profile2)
+        beam_image1 = self.make_beam_image(angle1, rho1, beam_width1)
+        beam_image2 = self.make_beam_image(angle2, rho2, beam_width2)
         beam_image = np.maximum(beam_image1, beam_image2)
         beam_mask = beam_image > 1e-4
         beam_image[beam_mask] += np.random.normal(
@@ -85,12 +111,6 @@ class BeamImageGenerator:
             size=beam_mask.sum(),
         )
         return np.clip(beam_image, a_min=0, a_max=1)
-
-    def gaussian_beam_profile(self, width, x0=None):
-        if not x0:
-            x0 = self.dimension.height // 2
-        x = np.mgrid[: self.dimension.height]
-        return gaussian(x, x0, width)
 
 
 def mask_perlin_noise(image, noise, threshold=0.2):
@@ -115,15 +135,24 @@ def perlin_noise(seed=0, shape=(2048, 2048), res=(64, 64), octaves=5):
 
 
 def make_noisy_image(
-    width, height, beam_width, angle1, angle2=0, beam_nosie=0.05, seed=0
+    width,
+    height,
+    beam_width,
+    angle1,
+    rho1=0,
+    angle2=0,
+    rho2=0,
+    beam_nosie=0.05,
+    seed=0,
 ):
     b = BeamImageGenerator((height, width))
-    beam_profile = b.gaussian_beam_profile(beam_width)
     image = b.make_crossing_beams(
-        angle1,
-        beam_profile,
-        angle2,
-        beam_profile,
+        angle1=angle1,
+        rho1=rho1,
+        beam_width1=beam_width,
+        angle2=angle2,
+        rho2=rho2,
+        beam_width2=beam_width,
         gaussian_noise_level=beam_nosie,
     )
     noise = perlin_noise(seed=seed, res=(64, 64))
@@ -139,8 +168,22 @@ def make_noisy_image(
     return (image * 255).astype(np.uint8)
 
 
-def make_noisefree_image(width, height, beam_width, angle1, angle2=0):
+def make_noisefree_image(
+    width,
+    height,
+    beam_width,
+    angle1,
+    rho1=0,
+    angle2=0,
+    rho2=0,
+):
     b = BeamImageGenerator((height, width))
-    beam_profile = b.gaussian_beam_profile(beam_width)
-    image = b.make_crossing_beams(angle1, beam_profile, angle2, beam_profile)
+    image = b.make_crossing_beams(
+        angle1=angle1,
+        rho1=rho1,
+        beam_width1=beam_width,
+        angle2=angle2,
+        rho2=rho2,
+        beam_width2=beam_width,
+    )
     return (image * 255).astype(np.uint8)
