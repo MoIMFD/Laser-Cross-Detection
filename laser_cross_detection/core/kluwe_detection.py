@@ -16,14 +16,25 @@ AngleSpaceDimension = namedtuple("AngleSpaceDimension", "start range steps")
 class Kluwe(DetectionMethodABC):
     def __init__(
         self,
-        cvt_uint8=False,
-        beam_width=20,
-        start_angle=0,
-        angle_range=180,
-        angle_steps=180,
-        beam_model=lmfit.models.GaussianModel(),
+        cvt_uint8: bool = False,
+        beam_width: int = 20,  # TODO check if int is necessary
+        start_angle: float = 0,
+        angle_range: float = 180,
+        angle_steps: int = 180,
+        beam_model: lmfit.Model = lmfit.models.GaussianModel(),
         interpolation_order: int = 3,
     ) -> None:
+        """_summary_
+
+        Args:
+            cvt_uint8 (bool, optional): If the image should be converted to uint8. Defaults to False.
+            beam_width (int, optional): Hint of the expected beam width. Defaults to 20.
+            start_angle (float, optional): start of the interval considered for angles. Defaults to 0.
+            angle_range (float, optional): range of the interval considered for angles. Defaults to 180.
+            angle_steps (int, optional): number of setos between start_angle and start_angle + angle_range. Defaults to 180.
+            beam_model (lmfit.Model, optional): lmfit model of the beam shape. Defaults to lmfit.models.GaussianModel().
+            interpolation_order (int, optional): order of interpolation scheme used for rotating. Defaults to 3.
+        """
         self.cvt_uint8 = cvt_uint8
         self.angle_space_dim = AngleSpaceDimension(
             start_angle, angle_range, angle_steps

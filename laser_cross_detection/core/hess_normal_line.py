@@ -6,6 +6,7 @@ from dataclasses import dataclass
 PI = np.pi
 TWOPI = np.pi * 2
 PI_HALF = np.pi / 2
+THREE_PI_HALF = 3 * np.pi / 2
 
 
 def norm_vector(v):
@@ -47,9 +48,6 @@ class HessNormalLine:
         # to the range (0, TWOPI]
         self.angle = (TWOPI + self.angle) % TWOPI
 
-        if self.distance < 0:
-            self.distance = self.distance
-
     @classmethod
     def from_degrees(cls, distance, angle, center=(0, 0)):
         return cls(distance, np.deg2rad(angle), center=center)
@@ -65,7 +63,14 @@ class HessNormalLine:
     @classmethod
     def from_direction(cls, p1, direction, center=(0, 0)):
         p2 = np.add(p1, direction)
-        angle = -np.arctan2(*direction[::-1])
+        p1_center = np.subtract(p1, center)
+
+        # check if slope point line is above or below slope
+        # import to calculate correct angle
+        if np.cross(direction, p1_center) < 0:
+            angle = np.arctan2(direction[1], direction[0]) - PI_HALF
+        else:
+            angle = np.arctan2(direction[1], direction[0]) + PI_HALF
         distance = distance_line_point(p1, p2, center)
         return cls(distance, angle, center=center)
 
@@ -78,7 +83,8 @@ class HessNormalLine:
     @classmethod
     def from_two_points(cls, p1, p2, center=(0, 0)):
         p1, p2 = np.array(p1), np.array(p2)
-        return cls.from_direction(p1, p2 - p1, center)
+        d = norm_vector(p2 - p1)
+        return cls.from_direction(p1, d, center)
 
     @property
     def normal_point(self) -> np.ndarray:

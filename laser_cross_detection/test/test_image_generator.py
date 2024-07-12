@@ -12,6 +12,18 @@ from ..utils import image_utils
 ImageDimension = namedtuple("ImageDimension", "height width")
 
 
+def solve_for_intersection(rho1, theta1, rho2, theta2, offset=(0, 0)):
+    """calculates the inter section of two lines given by rho and theta"""
+    if np.isclose(theta1, theta2):
+        return np.nan, np.nan
+    theta1, theta2 = np.deg2rad([theta1, theta2])
+    A = np.array(
+        [[np.cos(theta1), np.sin(theta1)], [np.cos(theta2), np.sin(theta2)]]
+    )
+    b = np.array([rho1, rho2])
+    return np.linalg.solve(A, b) + offset
+
+
 def gaussian(x, x0, width):
     return np.exp(
         -((x - x0) ** 2) / ((width / 6) ** 2)
@@ -60,9 +72,9 @@ def make_beam_image(
             )
             ** 2
         )
-        / ((beam_width / 2) ** 2)
+        / ((beam_width / 3) ** 2)
     )
-    return scale * image
+    return scale * (image / image.max())
 
 
 @dataclass
@@ -110,7 +122,7 @@ class BeamImageGenerator:
             scale=np.sqrt(gaussian_noise_level * 0.25),
             size=beam_mask.sum(),
         )
-        return np.clip(beam_image, a_min=0, a_max=1)
+        return beam_image  # np.clip(beam_image, a_min=0, a_max=1)
 
 
 def mask_perlin_noise(image, noise, threshold=0.2):
@@ -186,4 +198,4 @@ def make_noisefree_image(
         rho2=rho2,
         beam_width2=beam_width,
     )
-    return (image * 255).astype(np.uint8)
+    return (image / image.max() * 255).astype(np.uint8)
