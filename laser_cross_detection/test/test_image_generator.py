@@ -122,10 +122,10 @@ class BeamImageGenerator:
             scale=np.sqrt(gaussian_noise_level * 0.25),
             size=beam_mask.sum(),
         )
-        return beam_image  # np.clip(beam_image, a_min=0, a_max=1)
+        return np.clip(beam_image, 0, np.inf)
 
 
-def mask_perlin_noise(image, noise, threshold=0.2):
+def mask_perlin_noise(image, noise, threshold=0.35):
     image = image.copy()
     noise = noise[: image.shape[0], : image.shape[1]]
     mask = np.abs(noise) < threshold
@@ -133,7 +133,7 @@ def mask_perlin_noise(image, noise, threshold=0.2):
     return image
 
 
-def add_perlin_noise(image, noise, threshold=0.8):
+def add_perlin_noise(image, noise, threshold=0.6):
     image = image.copy()
     noise = noise[: image.shape[0], : image.shape[1]]
     image[abs(noise) > threshold] = abs(noise[abs(noise) > threshold])
@@ -149,11 +149,12 @@ def perlin_noise(seed=0, shape=(2048, 2048), res=(64, 64), octaves=5):
 def make_noisy_image(
     width,
     height,
-    beam_width,
     angle1,
     rho1=0,
+    beam_width1=1,
     angle2=0,
     rho2=0,
+    beam_width2=1,
     beam_nosie=0.05,
     seed=0,
 ):
@@ -161,41 +162,42 @@ def make_noisy_image(
     image = b.make_crossing_beams(
         angle1=angle1,
         rho1=rho1,
-        beam_width1=beam_width,
         angle2=angle2,
+        beam_width1=beam_width1,
         rho2=rho2,
-        beam_width2=beam_width,
+        beam_width2=beam_width2,
         gaussian_noise_level=beam_nosie,
     )
-    noise = perlin_noise(seed=seed, res=(64, 64))
-    image = mask_perlin_noise(image, noise)
-    noise = perlin_noise(seed=seed, res=(128, 128))
+    noise = perlin_noise(seed=seed, res=(256, 256), octaves=3)
     image = add_perlin_noise(image, noise)
+    noise = perlin_noise(seed=seed, res=(256, 256), octaves=3)
+    image = mask_perlin_noise(image, noise)
     image = salt_and_pepper_noise(
         image,
         0.5,
         0.04,
     )
     image = cv2.GaussianBlur(image, (5, 5), 1.5, 1.5)
-    return (image * 255).astype(np.uint8)
+    return (image / image.max() * 255).astype(np.uint8)
 
 
 def make_noisefree_image(
     width,
     height,
-    beam_width,
     angle1,
     rho1=0,
+    beam_width1=1,
     angle2=0,
     rho2=0,
+    beam_width2=2
 ):
     b = BeamImageGenerator((height, width))
     image = b.make_crossing_beams(
         angle1=angle1,
         rho1=rho1,
-        beam_width1=beam_width,
+        beam_width1=beam_width1,
         angle2=angle2,
         rho2=rho2,
-        beam_width2=beam_width,
+        beam_width2=beam_width2,
     )
     return (image / image.max() * 255).astype(np.uint8)
