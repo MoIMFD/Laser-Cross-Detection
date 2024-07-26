@@ -2,6 +2,9 @@ import numpy as np
 import cv2
 import skimage
 import scipy
+from collections import namedtuple
+
+ImageDimension = namedtuple("ImageDimension", "height width")
 
 
 def rotate_image(image, angle, order=3, impl="cv"):

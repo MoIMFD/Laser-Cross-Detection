@@ -7,9 +7,7 @@ from functools import lru_cache
 from perlin_numpy import perlin2d
 
 
-from ..utils import image_utils
-
-ImageDimension = namedtuple("ImageDimension", "height width")
+from ..utils.image_utils import ImageDimension
 
 
 def solve_for_intersection(rho1, theta1, rho2, theta2, offset=(0, 0)):
@@ -27,7 +25,7 @@ def solve_for_intersection(rho1, theta1, rho2, theta2, offset=(0, 0)):
 def gaussian(x, x0, width):
     return np.exp(
         -((x - x0) ** 2) / ((width / 6) ** 2)
-    )  # width is devided by 6 sigma to obtain pixel values
+    )  # width is divided by 6 sigma to obtain pixel values
 
 
 def salt_and_pepper_noise(image, s_vs_p, amount, scale=1.0):
@@ -157,6 +155,8 @@ def make_noisy_image(
     beam_width2=1,
     beam_nosie=0.05,
     seed=0,
+    add_threshold=0.6,
+    mask_threshold=0.35,
 ):
     b = BeamImageGenerator((height, width))
     image = b.make_crossing_beams(
@@ -169,9 +169,9 @@ def make_noisy_image(
         gaussian_noise_level=beam_nosie,
     )
     noise = perlin_noise(seed=seed, res=(256, 256), octaves=3)
-    image = add_perlin_noise(image, noise)
+    image = add_perlin_noise(image, noise, threshold=add_threshold)
     noise = perlin_noise(seed=seed, res=(256, 256), octaves=3)
-    image = mask_perlin_noise(image, noise)
+    image = mask_perlin_noise(image, noise, threshold=mask_threshold)
     image = salt_and_pepper_noise(
         image,
         0.5,
@@ -189,7 +189,7 @@ def make_noisefree_image(
     beam_width1=1,
     angle2=0,
     rho2=0,
-    beam_width2=2
+    beam_width2=2,
 ):
     b = BeamImageGenerator((height, width))
     image = b.make_crossing_beams(
