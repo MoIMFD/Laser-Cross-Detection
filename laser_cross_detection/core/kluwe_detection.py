@@ -93,7 +93,7 @@ class Kluwe(DetectionMethodABC):
         return angle_0, angle_1
 
     def calc_radius(self, arr, angle):
-        # window size: per side -> 3 means a full window of 7 indizes
+        # window size: per side -> 3 means a full window of 7 indices
         # radius about the center of the array
         col = self.collapse_arr(arr, angle)  # cv.INTER_CUBIC)
         x = np.arange(col.size) - col.size / 2
@@ -101,7 +101,7 @@ class Kluwe(DetectionMethodABC):
 
         window = idx + np.arange(
             -self.half_beam_width, self.half_beam_width + 1
-        )  # +1 bc else last idx not included
+        )  # +1 because else last idx not included
 
         params = self.beam_model.guess(data=col[window], x=x[window])
         result = self.beam_model.fit(
@@ -123,8 +123,6 @@ class Kluwe(DetectionMethodABC):
         return col
 
     def calc_angle_space(self, arr, offset=0):
-        start, ang_range, nsamples = self.angle_space_dim
-        start += offset
         angles = np.linspace(
             self.angle_space_dim.start + offset,
             self.angle_space_dim.start + offset + self.angle_space_dim.range,
@@ -140,12 +138,12 @@ class Kluwe(DetectionMethodABC):
             angles, angle_space = self.calc_angle_space(arr, offset=i * 15)
             min_angle = 5  # minimum angle between the lines
             min_distance = int(
-                (self.angle_space_dim.range / self.angle_space_dim.steps)
-                * min_angle
+                min_angle
+                / (self.angle_space_dim.range / self.angle_space_dim.steps)
             )
             maxima = skimage.feature.peak_local_max(
                 angle_space,
-                threshold_abs=np.percentile(angle_space, 80),
+                threshold_abs=np.percentile(angle_space, 50),
                 num_peaks=2,
                 min_distance=min_distance,
                 exclude_border=False,
