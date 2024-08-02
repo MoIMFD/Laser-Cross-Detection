@@ -1,6 +1,8 @@
 # figure folder
 figures/
+plots/
 tmp/
+notebooks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
