@@ -7,8 +7,8 @@ import numpy.typing as nptyping
 
 @dataclass
 class CameraCalibrationSet:
-    xyz: nptyping.NDArray[np.float32]
-    uv: nptyping.NDArray[np.float32]
+    xyz: nptyping.NDArray[np.float64]
+    uv: nptyping.NDArray[np.float64]
 
     @classmethod
     def from_path(
@@ -30,26 +30,26 @@ class CameraCalibrationSet:
         data["y"] = data["y"] * y_scale + y_offset
         data["z"] = data["z"] * z_scale + z_offset
         return cls(
-            data[["x", "y", "z"]].values.astype(np.float32),
-            data[["u", "v"]].values.astype(np.float32),
+            data[["x", "y", "z"]].values.astype(np.float64),
+            data[["u", "v"]].values.astype(np.float64),
         )
 
     @property
-    def x(self):
+    def x(self) -> nptyping.NDArray[np.float64]:
         return self.xyz[:, 0]
 
     @property
-    def y(self):
+    def y(self) -> nptyping.NDArray[np.float64]:
         return self.xyz[:, 1]
 
     @property
-    def z(self):
+    def z(self) -> nptyping.NDArray[np.float64]:
         return self.xyz[:, 2]
 
     @property
-    def u(self):
+    def u(self) -> nptyping.NDArray[np.float64]:
         return self.uv[:, 0]
 
     @property
-    def v(self):
+    def v(self) -> nptyping.NDArray[np.float64]:
         return self.uv[:, 1]

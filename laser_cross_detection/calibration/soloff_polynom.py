@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List
+from typing import Tuple, List, Callable
 from itertools import combinations_with_replacement
 from collections import Counter
 import functools
@@ -64,15 +64,19 @@ class SoloffPolynom:
     x_order: int
     y_order: int
     z_order: int
-    a: nptyping.NDArray = None
+    a: nptyping.NDArray[np.float64] = None
 
     def __post_init__(self):
         if self.a is None:
             self.a = np.ones(len(self.polynom) + 1)
         else:
-            self.a = np.asarray(self.a).ravel()
+            self.a = np.asarray(
+                self.a
+            ).flatten()  # use flatten to make sure array is copied
 
-    def __call__(self, *args: nptyping.NDArray):
+    def __call__(
+        self, *args: nptyping.NDArray[np.float64]
+    ) -> nptyping.NDArray[np.float64]:
         if len(args) == 3:
             M = self.build_m(*args)
         elif len(args) == 1:
@@ -85,36 +89,53 @@ class SoloffPolynom:
             raise ValueError("Invalid number of Arguments")
         return np.matmul(M, self.a)
 
-    def fit_curve_fit(self, xyz, u):
+    def fit_curve_fit(
+        self,
+        xyz: nptyping.NDArray[np.float64],
+        u: nptyping.NDArray[np.float64],
+    ) -> nptyping.NDArray[np.float64]:
         popt, pcov = sopt.curve_fit(
             self.fn_opt, xyz, u, p0=self.a, method="lm"
         )
         self.a = np.asarray(popt)
         return self
 
-    def fit_least_squares(self, xyz, u):
+    def fit_least_squares(
+        self,
+        xyz: nptyping.NDArray[np.float64],
+        u: nptyping.NDArray[np.float64],
+    ) -> nptyping.NDArray[np.float64]:
         result = sopt.least_squares(self.fn_opt_ls(xyz, u), x0=self.a)
         self.a = np.asarray(result.x)
         return self
 
     @functools.cached_property
-    def polynom(self):
+    def polynom(self) -> List[Tuple[str]]:
         return make_3d_polynom(self.x_order, self.y_order, self.z_order)
 
-    def fn_opt_ls(self, xyz, u):
+    def fn_opt_ls(
+        self,
+        xyz: nptyping.NDArray[np.float64],
+        u: nptyping.NDArray[np.float64],
+    ) -> Callable:
         def f(a):
             s = self.fn_opt(xyz, *a)
             return s - u
 
         return f
 
-    def fn_opt(self, xyz, *a):
+    def fn_opt(
+        self, xyz: nptyping.NDArray[np.float64], *a: float
+    ) -> nptyping.NDArray[np.float64]:
         self.a = np.asarray(a)
         return self.__call__(xyz)
 
     def build_m(
-        self, x1: nptyping.NDArray, x2: nptyping.NDArray, x3: nptyping.NDArray
-    ) -> nptyping.NDArray:
+        self,
+        x1: nptyping.NDArray[np.float64],
+        x2: nptyping.NDArray[np.float64],
+        x3: nptyping.NDArray[np.float64],
+    ) -> nptyping.NDArray[np.float64]:
         mapping = {"x1": x1, "x2": x2, "x3": x3}
         m = [
             np.prod([mapping[param] for param in params], axis=0)

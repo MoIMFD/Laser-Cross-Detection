@@ -31,7 +31,7 @@ class Kluwe(DetectionMethodABC):
             beam_width (int, optional): Hint of the expected beam width. Defaults to 20.
             start_angle (float, optional): start of the interval considered for angles. Defaults to 0.
             angle_range (float, optional): range of the interval considered for angles. Defaults to 180.
-            angle_steps (int, optional): number of setos between start_angle and start_angle + angle_range. Defaults to 180.
+            angle_steps (int, optional): number of steps between start_angle and start_angle + angle_range. Defaults to 180.
             beam_model (lmfit.Model, optional): lmfit model of the beam shape. Defaults to lmfit.models.GaussianModel().
             interpolation_order (int, optional): order of interpolation scheme used for rotating. Defaults to 3.
         """
