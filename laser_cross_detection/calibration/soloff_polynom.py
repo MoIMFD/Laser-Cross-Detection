@@ -9,11 +9,10 @@ import numpy.typing as nptyping
 import scipy.optimize as sopt
 
 
-def make_3d_polynom(
-    x_order: int, y_order: int, z_order: int
-) -> List[Tuple[str]]:
+def make_3d_polynom(*orders: int) -> List[Tuple[str]]:
     """Creates a mapping of all combinations of parameters for the 3d
-    polynomial. For example x_order = 3, y_order = 3 and z_order = 2:
+    polynomial. For example orders = (3, 3, 2), e. g. cubic order in x,
+    cubic order in y and quadratic order in z  :
                 [('x1',),
                  ('x2',),
                  ('x3',),
@@ -32,18 +31,17 @@ def make_3d_polynom(
                  ('x2', 'x2', 'x2'),
                  ('x2', 'x2', 'x3'),
                  ('x2', 'x3', 'x3')]
-    Using a mapping (dict) these can be replaced by actual values.
+    Using a mapping (dict) these can be replaced by actual values. The
+    variable names are x1 to xn, where n is the number of provided arguments.
 
     Args:
-        x_order (int): polynom order in x direction
-        y_order (int): polynom order in y direction
-        z_order (int): polynom order in z direction
+        orders (int): polynomial order in respective dimension
 
     Returns:
         List[Tuple[str]]: Terms of the polynomial with the specified orders
     """
-    max_order = max(x_order, y_order, z_order)
-    x = "x1 x2 x3".split()
+    max_order = max(orders)
+    x = [f"x{i+1}" for i, _ in enumerate(orders)]
     params = [
         c
         for i in range(max_order)
@@ -53,11 +51,10 @@ def make_3d_polynom(
         param
         for param in params
         if all(
-            (
-                Counter(param)["x1"] <= x_order,
-                Counter(param)["x2"] <= y_order,
-                Counter(param)["x3"] <= z_order,
-            )
+            [
+                Counter(param)[f"x{i+1}"] <= order
+                for i, order in enumerate(orders)
+            ]
         )
     ]
 
