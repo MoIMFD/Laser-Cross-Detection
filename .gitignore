@@ -1,8 +1,10 @@
 # figure folder
 figures/
 plots/
+images/
 tmp/
-notebooks/
+notebooks_private/
+pytorch_calibration/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
