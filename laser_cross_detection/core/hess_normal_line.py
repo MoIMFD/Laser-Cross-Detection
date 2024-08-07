@@ -1,26 +1,36 @@
 import numpy as np
+import numpy.typing as nptyping
 import matplotlib.pyplot as plt
 
 from dataclasses import dataclass
 
 PI = np.pi
-TWOPI = np.pi * 2
+TWO_PI = np.pi * 2
 PI_HALF = np.pi / 2
 THREE_PI_HALF = 3 * np.pi / 2
 
 
-def norm_vector(v):
+def norm_vector(v: nptyping.NDArray):
+    """ "Normalize a vector to length 1."""
     return v / np.linalg.norm(v)
 
 
-def distance_line_point(p1, p2, p):
-    p1, p2, p = np.array([p1, p2, p])
+def distance_line_point(
+    p1: nptyping.NDArray, p2: nptyping.NDArray, p: nptyping.NDArray
+):
+    """Calculates the shortest distance between a line defined by p1 and p2
+    and a point p"""
+    p1, p2, p = np.array([p1, p2, p])  # make sure all inputs are numpy arrays
     return np.linalg.norm(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
 
 
 def get_intersect(a1, a2, b1, b2):
     """
-    Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
+    Returns the point of intersection of the lines passing through a2,a1 and
+    b2,b1. Method is based on the cross product in homogenous coordinate
+    space. A detailed explanation is provided in this blog post:
+        https://imois.in/posts/line-intersections-with-cross-products/
+
     a1: [x, y] a point on the first line
     a2: [x, y] another point on the first line
     b1: [x, y] a point on the second line
@@ -46,7 +56,7 @@ class HessNormalLine:
         self.center = np.array(self.center)
         # converte angles (including negative angles)
         # to the range (0, TWOPI]
-        self.angle = (TWOPI + self.angle) % TWOPI
+        self.angle = (TWO_PI + self.angle) % TWO_PI
 
     @classmethod
     def from_degrees(cls, distance, angle, center=(0, 0)):
@@ -147,6 +157,4 @@ class HessNormalLine:
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
     fig, ax = plt.subplots()

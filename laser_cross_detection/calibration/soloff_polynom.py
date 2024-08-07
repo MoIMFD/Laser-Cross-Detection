@@ -9,8 +9,8 @@ import numpy.typing as nptyping
 import scipy.optimize as sopt
 
 
-def make_3d_polynom(*orders: int) -> List[Tuple[str]]:
-    """Creates a mapping of all combinations of parameters for the 3d
+def make_nd_polynom(*orders: int) -> List[Tuple[str]]:
+    """Creates a mapping of all combinations of parameters for the nd
     polynomial. For example orders = (3, 3, 2), e. g. cubic order in x,
     cubic order in y and quadratic order in z  :
                 [('x1',),
@@ -111,7 +111,7 @@ class SoloffPolynom:
 
     @functools.cached_property
     def polynom(self) -> List[Tuple[str]]:
-        return make_3d_polynom(self.x_order, self.y_order, self.z_order)
+        return make_nd_polynom(self.x_order, self.y_order, self.z_order)
 
     def fn_opt_ls(
         self,

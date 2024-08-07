@@ -1,3 +1,6 @@
+# TODO: Make the template matching routine fit the new frame work
+
+
 class TemplateMatching:
     def __init__(self, images):
         # from .core import ImageArray

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import numpy.typing as nptyping
 import matplotlib.pyplot as plt
 
 from scipy.sparse import csr_matrix
@@ -10,7 +11,14 @@ from . import HessNormalLine
 
 
 class Ransac(DetectionMethodABC):
-    def __call__(self, arr, *args, **kwargs):
+    """Laser Cross Detection Method based on Ransac Algorithm. Implementation
+    by Robert Hardege. Details provide in
+    https://doi.org/10.1007/s00348-023-03729-1
+
+    Minor changes to fit in the new frame by Kluwe
+    """
+
+    def __call__(self, arr: nptyping.NDArray, *args, **kwargs):
         # arr_copy = np.copy(arr)
         # gaussian filter & binarize image/array
         arr = Ransac.__preprocess(arr)
@@ -45,7 +53,7 @@ class Ransac(DetectionMethodABC):
         return line1.intersect_crossprod(line2)
 
     @classmethod
-    def __preprocess(self, arr):
+    def __preprocess(self, arr: nptyping.NDArray):
         blur = cv2.GaussianBlur(arr, (5, 5), 0)
         _, arr = cv2.threshold(
             np.array(blur, dtype=np.uint16),
@@ -57,7 +65,7 @@ class Ransac(DetectionMethodABC):
         return arr
 
     @classmethod
-    def __ransac(self, x, y):
+    def __ransac(self, x: nptyping.NDArray, y: nptyping.NDArray):
         # scikit learn ransac
         ransac = linear_model.RANSACRegressor(
             stop_probability=0.9999,
@@ -95,13 +103,13 @@ class Ransac(DetectionMethodABC):
     # this is some fast magic to get the indices from a numpy array:
     # https://stackoverflow.com/questions/33281957/faster-alternative-to-numpy-where
     @classmethod
-    def __compute_M(self, data):
+    def __compute_M(self, data: nptyping.NDArray):
         cols = np.arange(data.size)
         return csr_matrix(
             (cols, (data.ravel(), cols)), shape=(data.max() + 1, data.size)
         )
 
     @classmethod
-    def __get_indices_sparse(self, data):
+    def __get_indices_sparse(self, data: nptyping.NDArray):
         M = self.__compute_M(data)
         return [np.unravel_index(row.data, data.shape) for row in M]
