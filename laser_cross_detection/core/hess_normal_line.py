@@ -10,16 +10,32 @@ PI_HALF = np.pi / 2
 THREE_PI_HALF = 3 * np.pi / 2
 
 
-def norm_vector(v: nptyping.NDArray):
-    """ "Normalize a vector to length 1."""
+def norm_vector(v: nptyping.NDArray) -> nptyping.NDArray:
+    """Normalize a vector to length 1.
+
+    Args:
+        v (nptyping.NDArray): vector to normalize
+
+    Returns:
+        nptyping.NDArray: normalized vector
+    """
     return v / np.linalg.norm(v)
 
 
 def distance_line_point(
     p1: nptyping.NDArray, p2: nptyping.NDArray, p: nptyping.NDArray
-):
+) -> float:
     """Calculates the shortest distance between a line defined by p1 and p2
-    and a point p"""
+    and a point p
+
+    Args:
+        p1 (nptyping.NDArray): first point on line
+        p2 (nptyping.NDArray): second point on line
+        p (nptyping.NDArray): point to calculate distance from line
+
+    Returns:
+        float: distance betweeen line (p1, p2) and point p
+    """
     p1, p2, p = np.array([p1, p2, p])  # make sure all inputs are numpy arrays
     return np.linalg.norm(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
 
