@@ -5,7 +5,7 @@ import scipy
 import skimage as ski
 
 from collections import namedtuple
-from typing import Union
+from typing import Union, Tuple
 
 from .hess_normal_line import HessNormalLine
 from .detection_abc import DetectionMethodABC
@@ -18,7 +18,7 @@ class Kluwe(DetectionMethodABC):
     def __init__(
         self,
         cvt_uint8: bool = False,
-        beam_width: int = 20,  # TODO check if int is necessary
+        beam_width: int = 20,
         start_angle: float = 0,
         angle_range: float = 180,
         angle_steps: int = 180,
@@ -52,11 +52,26 @@ class Kluwe(DetectionMethodABC):
         self.interpolation_order = interpolation_order
 
     @property
-    def half_beam_width(self):
-        return self.beam_width // 2
+    def half_beam_width(self) -> float:
+        """Half of the user guessed beam width.
 
-    def __call__(self, image: nptyping.NDArray, *args, **kwds):
+        Returns:
+            float: half of the user guessed beam width
+        """
+        return self.beam_width / 2
 
+    def __call__(
+        self, image: nptyping.NDArray, *args, **kwds
+    ) -> nptyping.NDArray:
+        """Calculates the point of intersection of two beams in images
+        containing both beams.
+
+        Args:
+            image (nptyping.NDArray): image to process
+
+        Returns:
+            nptyping.NDArray: point of intersection
+        """
         if self.cvt_uint8:
             image = ski.util.img_as_ubyte(image)
 
@@ -79,9 +94,18 @@ class Kluwe(DetectionMethodABC):
 
         return intersection
 
-    def calc_angles(self, arr: nptyping.NDArray):
-        guess = self.estimate_global_maxima(arr)
+    def calc_angles(self, arr: nptyping.NDArray) -> Tuple[float, float]:
+        """Calculates the angles of two beams present in a image.
 
+        Args:
+            arr (nptyping.NDArray): image containing the beams
+
+        Returns:
+            Tuple[float, float]: angles of the beams in degrees
+        """
+        # estimate angles
+        guess = self.estimate_global_maxima(arr)
+        # optimize estimation by minimizing coast function
         res_0 = scipy.optimize.minimize(
             fun=optimization_loss_function,
             x0=(guess[0],),
@@ -100,8 +124,18 @@ class Kluwe(DetectionMethodABC):
         angle_1 = res_1.x[0]
         return angle_0, angle_1
 
-    def calc_radius(self, arr: nptyping.NDArray, angle: float):
-        col = self.collapse_arr(arr, angle)  # cv.INTER_CUBIC)
+    def calc_radius(self, arr: nptyping.NDArray, angle: float) -> float:
+        """Calculates the radius (distance from the center) of a beam with
+        known angle.
+
+        Args:
+            arr (nptyping.NDArray): image of the beam
+            angle (float): angle of the beam in degrees
+
+        Returns:
+            float: radius of the beam, e. g. the distance from the center
+        """
+        col = self.collapse_arr(arr, angle)
         x = np.arange(col.size) - col.size / 2
         idx = np.argmax(col)
 
@@ -118,7 +152,21 @@ class Kluwe(DetectionMethodABC):
         peak_position = result.params["center"].value
         return peak_position
 
-    def collapse_arr(self, arr: nptyping.NDArray, angle: float = 0.0):
+    def collapse_arr(
+        self, arr: nptyping.NDArray, angle: float = 0.0
+    ) -> nptyping.NDArray:
+        """Rotates an image by the specified amount and reduces the 2d image
+        to a 1d vector by averaging aling the first axis.
+
+        Args:
+            arr (nptyping.NDArray): 2d image to process
+            angle (float, optional): angle to rotate in degrees.
+                Defaults to 0.0.
+
+        Returns:
+            nptyping.NDArray: 1d averaged vector
+        """
+
         if angle == 0:
             col = np.mean(arr, axis=0).flatten()
         else:
@@ -128,7 +176,24 @@ class Kluwe(DetectionMethodABC):
             ).flatten()
         return col
 
-    def calc_angle_space(self, arr: nptyping.NDArray, offset: float = 0):
+    def calc_angle_space(
+        self, arr: nptyping.NDArray, offset: float = 0
+    ) -> nptyping.NDArray:
+        """Performs the collapse_arr operation on a linear space of angles.
+        When the searched beams align with the start/end point of the range of
+        angles, a single peak may gets splitted and creates two peaks. For this
+        case the offset parameter exists which offsets the angle range by the
+        specified amount.
+
+        Args:
+            arr (nptyping.NDArray): image to process
+            offset (float, optional): offset to the angle range in degrees.
+                Defaults to 0.
+
+        Returns:
+            nptyping.NDArray: accumulated result of the collapse_arr operation
+                (referred to as "angle space")
+        """
         angles = np.linspace(
             self.angle_space_dim.start + offset,
             self.angle_space_dim.start + offset + self.angle_space_dim.range,
@@ -141,7 +206,21 @@ class Kluwe(DetectionMethodABC):
 
     def estimate_global_maxima(
         self, arr: nptyping.NDArray, min_angle: Union[float | None] = None
-    ):
+    ) -> Tuple[float, float]:
+        """Estimating the orientation of two beams in an image to provide a
+        good initial guess used as starting point for optimization. Image is
+        rotated in discrete steps. Angles where the beams best align with the
+        first image axis are returned.
+
+        Args:
+            arr (nptyping.NDArray): image to process
+            min_angle (Union[float  |  None], optional): minimum angle between
+                the beams. Defaults to None (2 angle steps).
+
+        Returns:
+            Tuple[float, float]: estimation of the angles of the two beams in
+                degrees
+        """
         if min_angle is None:
             min_angle = (
                 2 * self.angle_space_dim.range / self.angle_space_dim.steps
@@ -169,7 +248,17 @@ class Kluwe(DetectionMethodABC):
         return est_angle0, est_angle1
 
 
-def optimization_loss_function(angle: float, im: nptyping.NDArray):
+def optimization_loss_function(angle: float, im: nptyping.NDArray) -> float:
+    """Coast function used for accurate estimation of the alignment of a
+    straight beam in an image with the first axis of the image.
+
+    Args:
+        angle (float): angle to rotate the image in degree
+        im (nptyping.NDArray): image to check
+
+    Returns:
+        float: score of the alignment
+    """
     neg_maximum = -np.max(
         np.mean(
             image_utils.rotate_image(im, angle=angle[0], impl="skimage"),
