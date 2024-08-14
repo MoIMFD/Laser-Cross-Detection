@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as nptyping
 
 from scipy.sparse import csr_matrix
-import sklearn as skl
+import sklearn.linear_model as skllm
 
 from typing import List, Tuple
 
@@ -64,7 +64,7 @@ class Ransac(DetectionMethodABC):
                 x coordinate for points with highest residuals,
                 y coordinate for points with highest residuals
         """
-        ransac = skl.linear_model.RANSACRegressor(
+        ransac = skllm.RANSACRegressor(
             stop_probability=0.9999,
             residual_threshold=10,
             max_trials=500,
