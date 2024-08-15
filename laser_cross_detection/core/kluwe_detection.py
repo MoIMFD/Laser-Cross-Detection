@@ -58,7 +58,7 @@ class Kluwe(DetectionMethodABC):
         Returns:
             float: half of the user guessed beam width
         """
-        return self.beam_width / 2
+        return self.beam_width // 2
 
     def __call__(
         self, image: nptyping.NDArray, *args, **kwds
@@ -223,7 +223,7 @@ class Kluwe(DetectionMethodABC):
         """
         if min_angle is None:
             min_angle = (
-                2 * self.angle_space_dim.range / self.angle_space_dim.steps
+                5 * self.angle_space_dim.range / self.angle_space_dim.steps
             )
         for i in range(3):
             angles, angle_space = self.calc_angle_space(arr, offset=i * 15)
