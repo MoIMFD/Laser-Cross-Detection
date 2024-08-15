@@ -1,29 +1,68 @@
 import numpy as np
 import numpy.typing as nptyping
-import lmfit
 import scipy.optimize as sopt
-import skimage as ski
 
 from typing import Union, Tuple
 
 from .hess_normal_line import HessNormalLine
 from .detection_abc import DetectionMethodABC
-from ..utils import image_utils
-from ..test import make_beam_image
 
 
 class Gunady(DetectionMethodABC):
-    """ """
+    """Laser Cross detection based on the method described by Gunady et al.
+    A 2d dimensional gaussian beam is fitted to the image, yielding information
+    on the first beam. This beam is subtracted from the image and the procedure
+    is repeated, yielding the remaining beam. The method is sensitive to initial
+    conditions since many parameter need to be fitted.
+
+        Ian E Gunady et al 2024 Meas. Sci. Technol. 35 105901
+        DOI: 10.1088/1361-6501/ad574d
+    """
 
     def __call__(
-        self, arr: nptyping.NDArray, *args, p0, **kwargs
+        self,
+        arr: nptyping.NDArray,
+        *args,
+        p01: Tuple[float, float, float, float],
+        p02: Union[Tuple[float, float, float, float], None] = None,
+        **kwargs
     ) -> nptyping.NDArray:
+        """Estimates the intersection point of two gaussian beams in a 2d
+        image by fitting gaussian beams using least squares method. The method
+        is sensitive regarding starting points. p01 and p02 should be chosen
+        as close as possible to the actual beam parameter.
+
+        Args:
+            arr (nptyping.NDArray): image to process
+            p01 (Tuple[float, float, float, float]): starting beam parameter
+                set for the first beam used for optimization: angle,
+                distance from center, beam width, peak intensity
+            p02 (Tuple[float, float, float, float]): starting beam parameter
+                set for the second beam used for optimization: angle,
+                distance from center, beam width, peak intensity
+                ->  If not specified the set for beam one is used but rotated
+                    by 90 degrees
+
+        Returns:
+            nptyping.NDArray: 1d array containing the coordinates (x, y) of the
+                intersection
+        """
 
         height, width = arr.shape
         arr = arr.copy()
         arr[arr < 50] = 0
 
-        def fit_function(xy, theta, rho, beam_width, scale):
+        def fit_function(
+            xy: Tuple[nptyping.NDArray, nptyping.NDArray],
+            theta: float,
+            rho: float,
+            beam_width: float,
+            scale: float,
+        ):
+            """Function describing a 2d gaussian beam. Result is flattened
+            (.ravel) since scipy.optimize.curve_fit expects a 1d array to be
+            returned. The flattening does not effect the fitting process.
+            """
             x, y = xy
             theta = np.deg2rad(theta)
             return (
@@ -45,12 +84,12 @@ class Gunady(DetectionMethodABC):
         y = np.arange(height)
 
         xx, yy = np.meshgrid(x, y)
+        # fit the first beam
         popt, pcov = sopt.curve_fit(
             fit_function,
             (xx, yy),
             arr.ravel(),
-            p0=p0,
-            # bounds=([-width / 2, 0, 5, 10], [width / 2, 359, width / 10, 255]),
+            p0=p01,
         )
 
         theta1, rho1, *_ = popt
@@ -60,15 +99,17 @@ class Gunady(DetectionMethodABC):
         first_beam_image = fit_function((xx, yy), *popt).reshape(
             (height, width)
         )
-
+        # create residual image
         residual = arr - first_beam_image
         residual[residual < 50] = 0
-
+        # fit the second beam
+        if p02 is None:
+            p02 = p01 + [90, 0, 0, 0]
         popt, pcov = sopt.curve_fit(
             fit_function,
             (xx, yy),
             residual.ravel(),
-            p0=p0 + [90, 0, 0, 0],
+            p0=p02,
         )
         theta2, rho2, *_ = popt
         beam2 = HessNormalLine.from_degrees(
