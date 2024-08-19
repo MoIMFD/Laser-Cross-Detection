@@ -1,15 +1,11 @@
 import numpy as np
 import numpy.typing as nptyping
-import lmfit
 import scipy.optimize as sopt
-import skimage as ski
 
 from typing import Union, Tuple
 
 from .hess_normal_line import HessNormalLine
 from .detection_abc import DetectionMethodABC
-from ..utils import image_utils
-from ..test import make_beam_image
 
 
 class Gunady(DetectionMethodABC):
@@ -23,7 +19,34 @@ class Gunady(DetectionMethodABC):
         DOI: 10.1088/1361-6501/ad574d
     """
 
-    def __call__(self, arr: nptyping.NDArray, *args, p0, **kwargs) -> nptyping.NDArray:
+    def __call__(
+        self,
+        arr: nptyping.NDArray,
+        *args,
+        p01: Tuple[float, float, float, float],
+        p02: Union[Tuple[float, float, float, float], None] = None,
+        **kwargs
+    ) -> nptyping.NDArray:
+        """Estimates the intersection point of two gaussian beams in a 2d
+        image by fitting gaussian beams using least squares method. The method
+        is sensitive regarding starting points. p01 and p02 should be chosen
+        as close as possible to the actual beam parameter.
+
+        Args:
+            arr (nptyping.NDArray): image to process
+            p01 (Tuple[float, float, float, float]): starting beam parameter
+                set for the first beam used for optimization: angle,
+                distance from center, beam width, peak intensity
+            p02 (Tuple[float, float, float, float]): starting beam parameter
+                set for the second beam used for optimization: angle,
+                distance from center, beam width, peak intensity
+                ->  If not specified the set for beam one is used but rotated
+                    by 90 degrees
+
+        Returns:
+            nptyping.NDArray: 1d array containing the coordinates (x, y) of the
+                intersection
+        """
 
         height, width = arr.shape
         arr = arr.copy()
@@ -36,9 +59,10 @@ class Gunady(DetectionMethodABC):
             beam_width: float,
             scale: float,
         ):
-            """Function describing a 2d gaussian beam. Result is flattened (.ravel) since
-            scipy.optimize.curve_fit expects a 1d array to be returned. The flattening does
-            not effect the fitting process."""
+            """Function describing a 2d gaussian beam. Result is flattened
+            (.ravel) since scipy.optimize.curve_fit expects a 1d array to be
+            returned. The flattening does not effect the fitting process.
+            """
             x, y = xy
             theta = np.deg2rad(theta)
             return (
@@ -65,23 +89,27 @@ class Gunady(DetectionMethodABC):
             fit_function,
             (xx, yy),
             arr.ravel(),
-            p0=p0,
+            p0=p01,
         )
 
         theta1, rho1, *_ = popt
         beam1 = HessNormalLine.from_degrees(
             angle=theta1, distance=rho1, center=(width / 2, height / 2)
         )
-        first_beam_image = fit_function((xx, yy), *popt).reshape((height, width))
+        first_beam_image = fit_function((xx, yy), *popt).reshape(
+            (height, width)
+        )
         # create residual image
         residual = arr - first_beam_image
         residual[residual < 50] = 0
         # fit the second beam
+        if p02 is None:
+            p02 = p01 + [90, 0, 0, 0]
         popt, pcov = sopt.curve_fit(
             fit_function,
             (xx, yy),
             residual.ravel(),
-            p0=p0 + [90, 0, 0, 0],
+            p0=p02,
         )
         theta2, rho2, *_ = popt
         beam2 = HessNormalLine.from_degrees(
