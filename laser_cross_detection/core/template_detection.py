@@ -82,13 +82,20 @@ class TemplateMatching(DetectionMethodABC):
             params=params,
         )
 
-        return np.add(
-            (
-                fit_result.best_values["centerx"],
-                fit_result.best_values["centery"],
-            ),
-            self.intersec_offset,
+        return (
+            np.add(
+                (
+                    fit_result.best_values["centerx"],
+                    fit_result.best_values["centery"],
+                ),
+                self.intersec_offset,
+            )
+            + self.half_template_shape
         )
+
+    @property
+    def half_template_shape(self):
+        return np.divide(self.template.shape, 2)
 
     def update_template(
         self, template: nptyping.NDArray, intersec_offset: Tuple[float, float]

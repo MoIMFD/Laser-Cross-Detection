@@ -25,6 +25,7 @@ class Gunady(DetectionMethodABC):
         *args,
         p01: Tuple[float, float, float, float],
         p02: Union[Tuple[float, float, float, float], None] = None,
+        threshold: float = 100,
         **kwargs
     ) -> nptyping.NDArray:
         """Estimates the intersection point of two gaussian beams in a 2d
@@ -42,6 +43,8 @@ class Gunady(DetectionMethodABC):
                 distance from center, beam width, peak intensity
                 ->  If not specified the set for beam one is used but rotated
                     by 90 degrees
+            threshold (int): intensity threshold used to remove dark objects
+                not belonging to the beams
 
         Returns:
             nptyping.NDArray: 1d array containing the coordinates (x, y) of the
@@ -50,7 +53,7 @@ class Gunady(DetectionMethodABC):
 
         height, width = arr.shape
         arr = arr.copy()
-        arr[arr < 50] = 0
+        arr[arr < threshold] = 0
 
         def fit_function(
             xy: Tuple[nptyping.NDArray, nptyping.NDArray],
@@ -101,10 +104,10 @@ class Gunady(DetectionMethodABC):
         )
         # create residual image
         residual = arr - first_beam_image
-        residual[residual < 50] = 0
+        residual[residual < threshold] = 0
         # fit the second beam
         if p02 is None:
-            p02 = p01 + [90, 0, 0, 0]
+            p02 = np.add(p01, [90, 0, 0, 0])
         popt, pcov = sopt.curve_fit(
             fit_function,
             (xx, yy),
