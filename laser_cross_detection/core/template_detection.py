@@ -1,106 +1,183 @@
-# TODO: Make the template matching routine fit the new frame work
+import numpy as np
+import numpy.typing as nptyping
+import skimage as ski
+import lmfit
+from typing import Union, Tuple
+import matplotlib.pyplot as plt
+from matplotlib.widgets import RectangleSelector
+
+from .detection_abc import DetectionMethodABC
 
 
-class TemplateMatching:
-    def __init__(self, images):
-        # from .core import ImageArray
-        # prepare images for choosing the one with the cross in the middle for every view
-        images_summed = [[] for _ in range(len(images))]
-        for i_pos in range(len(images)):
-            for i_cam in range(len(images[0][0])):
-                # sum all images of a loop
-                imList = [None for _ in range(len(images[0]))]
-                for i_loop in range(len(images[0])):
-                    imList[i_loop] = images[i_pos][i_loop][i_cam]
-                arr = imList[0]
-                for i_loop in range(1, len(images[0])):
-                    arr = np.maximum(arr, imList[i_loop])
-                images_summed[i_pos].append(arr)
-        # ImageArray.plot(images_summed[0][0])
+class TemplateMatching(DetectionMethodABC):
+    def __init__(
+        self, template: nptyping.NDArray, intersec_offset: Tuple[float, float]
+    ) -> None:
+        """Detecting the intersection of two light beams in an image based
+        on template matching.
 
-        # choose best images by center of weight -> as close as possible to center of image
-        best_images_idx = [None for _ in range(len(images_summed[0]))]
-        distances = [np.inf for _ in range(len(images_summed[0]))]
-        for i_cam in range(len(images_summed[0])):
-            for i_pos in range(len(images_summed)):
-                arr = images_summed[i_pos][i_cam]
-                com = ndimage.center_of_mass(arr)
-                d = sqrt(
-                    (com[0] - arr.shape[0] / 3) ** 2
-                    + (com[1] - arr.shape[1] / 3) ** 2
-                )
-                if distances[i_cam] > d:
-                    distances[i_cam] = d
-                    best_images_idx[i_cam] = i_pos
-        # ImageArray.plot(images_summed[best_images_idx_byAbs[0]][0])
-        # ImageArray.plot(images_summed[best_images_idx_byAbs[1]][1])
-        # ImageArray.plot(images_summed[best_images_idx_byAbs[2]][2])
+        Args:
+            template (nptyping.NDArray): template of the intersection
+            intersec_offset (Tuple[float, float]): location of the intersection
+                within the template
+        """
+        super().__init__()
+        self.template = template
+        self.intersec_offset = intersec_offset
 
-        # display images; let user cut out cross; let user mark center of the cross
-        self.templates = [None for _ in range(len(best_images_idx))]
-        self.centers = [None for _ in range(len(best_images_idx))]
-        for i_cam in range(len(best_images_idx)):
-            # user interactive part (template and center selection)
-            im = images_summed[best_images_idx[i_cam]][i_cam]
-            im = ((im - np.min(im)) / np.max(im) * 255).astype(np.uint8)
-            cv.namedWindow("Template Selection", cv.WINDOW_GUI_EXPANDED)
-            x0, y0, w0, h0 = cv.selectROI(
-                windowName="Template Selection",
-                img=im,
-                showCrosshair=True,
-                fromCenter=True,
-            )
-            cv.destroyWindow("Template Selection")
-            cv.namedWindow("Center Selection", cv.WINDOW_GUI_EXPANDED)
-            im = im[y0 : y0 + h0, x0 : x0 + w0]
-            x1, y1, w1, h1 = cv.selectROI(
-                windowName="Center Selection",
-                img=im,
-                showCrosshair=True,
-                fromCenter=True,
-            )
-            cv.destroyWindow("Center Selection")
-            # save template and center information
-            self.centers[i_cam] = [
-                x1 + w1 / 2,
-                y1 + h1 / 2,
-            ]  # in opencv, coordinates are transposed to array nomenclature
-            self.templates[i_cam] = im
+    def __call__(
+        self,
+        image: nptyping.NDArray,
+        *args,
+        fit_window: Union[int, None] = None,
+        **kwargs,
+    ) -> nptyping.NDArray[np.float64]:
+        """Uses the specified template to identify the intersection of two
+        light beams in a new image. The process consists of the generation
+        of a correlation map, finding the discrete maximum, extracting a
+        quadratic sub map with size fit_window around the maximum, fitting
+        a 2d gaussian to the sub map and returning the center of the fitted
+        2d gaussian distribution.
 
-    def compute(self, arr, *args, **kwargs):  # *args -> idx, ...
-        # from .core import ImageArray
-        idx = kwargs["i_cam"]
-        # irgendso eine scikit funktion -> J. P. Lewis, “Fast Normalized Cross-Correlation”, Industrial Light and Magic.
-        mt = match_template(arr, self.templates[idx])
-        # ImageArray.plot(mt)
+        Args:
+            image (nptyping.NDArray): _description_
+            fit_window (Union[int, None], optional): Number of pixels used for
+                the 2d window to fit a two dimensional gaussian to the maximum
+                of the correlation map. Defaults to None which uses
+                max(width, height) / 10 as the fit_window.
 
-        # max idx
-        x_y = np.unravel_index(mt.argmax(), mt.shape)
+        Returns:
+            nptyping.NDArray[np.float64]: detected coordinates of the
+                intersection
+        """
+        image = image.copy()
+        result = ski.feature.match_template(
+            image=image, template=self.template
+        )
 
-        # subpixel peak detection: -> lmfit 2d gauss model
-        gaussWinSize: int = 12  # px squared -> should be odd number
-        x, y, z = ([] for _ in range(3))
-        for yy in range(
-            x_y[1] - int(gaussWinSize / 2), x_y[1] + int(gaussWinSize / 2) + 1
-        ):
-            for xx in range(
-                x_y[0] - int(gaussWinSize / 2),
-                x_y[0] + int(gaussWinSize / 2) + 1,
-            ):
-                x.append(xx)
-                y.append(yy)
-                try:
-                    z.append(mt[xx, yy])
-                except:
-                    return None, None
+        max_index = np.unravel_index(np.argmax(result), shape=result.shape)
+
+        if fit_window is None:
+            fit_window = max(image.shape) // 25
+
+        x_slice = slice(
+            max_index[0] - fit_window, max_index[0] + fit_window + 1
+        )
+        x = np.mgrid[x_slice]
+        y_slice = slice(
+            max_index[1] - fit_window, max_index[1] + fit_window + 1
+        )
+        y = np.mgrid[y_slice]
+        result_section = result[x_slice, y_slice]
+
+        xx, yy = np.meshgrid(x, y)
         model = lmfit.models.Gaussian2dModel()
-        params = model.guess(z, x, y)
-        result = model.fit(z, x=x, y=y, params=params)
+        params = model.guess(
+            data=result_section.ravel(), y=xx.ravel(), x=yy.ravel()
+        )
+        fit_result = model.fit(
+            data=result_section.ravel(),
+            x=xx.ravel(),
+            y=yy.ravel(),
+            params=params,
+        )
 
-        hor = self.centers[idx][0] + result.best_values["centery"]
-        ver = self.centers[idx][1] + result.best_values["centerx"]
+        return np.add(
+            (
+                fit_result.best_values["centerx"],
+                fit_result.best_values["centery"],
+            ),
+            self.intersec_offset,
+        )
 
-        if not CommonFunctions.test_reasonable_position(arr=arr, x=hor, y=ver):
-            hor, ver = -9, -9  # is removed later in the core routines
-        return hor, ver
-        # y -> horizontale Komponente, x -> vertikale Komponente
+    def update_template(
+        self, template: nptyping.NDArray, intersec_offset: Tuple[float, float]
+    ):
+        """Set a new template and offset
+
+        Args:
+            template (nptyping.NDArray): template of the intersection
+            intersec_offset (Tuple[float, float]): location of the intersection
+                within the template
+
+        Returns:
+            _type_: self
+        """
+        self.template = template
+        self.intersec_offset = intersec_offset
+        return self
+
+    @staticmethod
+    def select_template(
+        ref_image: nptyping.NDArray,
+    ) -> Tuple[nptyping.NDArray, float, float]:
+        """Static method to interactively select a template and the offset
+        using matplotlib widgets.
+
+        Args:
+            ref_image (nptyping.NDArray): image to select the template from
+
+        Returns:
+            Tuple[nptyping.NDArray, float, float]: selected template and x, y
+                coordinates of the intersection
+        """
+        fig, ax = plt.subplots()
+        ax.imshow(ref_image, cmap="gray")
+
+        so = SelectorObject()
+        selector = RectangleSelector(
+            ax=ax, onselect=so.__call__, ignore_event_outside=True
+        )
+        plt.show(block=True)
+
+        template = ref_image[so.yslice, so.xslice]
+        fig, ax = plt.subplots()
+
+        co = CenterObject()
+        ax.imshow(template, cmap="gray")
+
+        cid = fig.canvas.mpl_connect("button_press_event", co.__call__)
+
+        plt.show(block=True)
+
+        return template, co.x, co.y
+
+
+class SelectorObject:
+    """Object to store result from matplotlib RectangleSelector"""
+
+    def __init__(self):
+        self.p1 = (None, None)
+        self.p2 = (None, None)
+
+    def __call__(self, eclick, erelease):
+        self.p1 = int(eclick.xdata), int(eclick.ydata)
+        self.p2 = int(erelease.xdata), int(erelease.ydata)
+        plt.close()
+
+    @property
+    def xslice(self):
+        x0, x1 = sorted((self.p1[0], self.p2[0]))
+        return slice(x0, x1)
+
+    @property
+    def yslice(self):
+        y0, y1 = sorted((self.p1[1], self.p2[1]))
+        return slice(y0, y1)
+
+
+class CenterObject:
+    """Objetc to store result from interactive center selection"""
+
+    def __init__(self):
+        self.x = None
+        self.y = None
+        self.scatter = plt.scatter(None, None)
+
+    def __call__(self, event):
+        self.x = event.xdata
+        self.y = event.ydata
+
+        self.scatter.remove()
+        self.scatter = plt.scatter(self.x, self.y, c="red", alpha=0.3)
+        plt.gcf().canvas.draw_idle()
