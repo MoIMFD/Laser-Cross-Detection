@@ -1,6 +1,5 @@
-import numpy as np
 import numpy.typing as nptyping
-import cv2
+import skimage as ski
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -28,13 +27,7 @@ class DetectionMethodABC(ABC):
         Returns:
             nptyping.NDArray: preprocessed binary image
         """
-        arr = cv2.convertScaleAbs(arr)
-        blur = cv2.GaussianBlur(arr, (5, 5), 0)
-        _, arr = cv2.threshold(
-            np.array(blur, dtype=np.uint16),
-            0,
-            255,
-            cv2.THRESH_BINARY + cv2.THRESH_OTSU,
-        )
-        arr = arr.astype(bool)
-        return arr
+
+        arr = ski.util.img_as_float(arr)
+        arr = ski.filters.gaussian(arr, 3)
+        return (arr > ski.filters.threshold_otsu(arr)).astype(bool)
