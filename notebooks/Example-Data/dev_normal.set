@@ -1,0 +1,16 @@
+// set file created by DaVis
+
+#GROUP Sets
+SetType = 4194560;
+SetGroups = "";
+SetTime = "Fri Dec 08 08:45:38 2023";
+SetComments = "";
+SetStart = 1;
+SetInc = 1;
+SetSourceSet = "";
+SetViewCallback = "";
+SetLoadCallback = "";
+SetIdentifier = "RecordingLoop";
+SetSubSetStart = 50;
+SetSubSetInc = 1;
+SetDirection = "Horizontal";

@@ -1,0 +1,13 @@
+// set file <D:/Kruemmer/20231124-3D-PTV-Kruemmer/Recording_Date=231206_Time=151304_calib/TimeFilMax_sL=all_01/loop=55.set> created by DaVis
+
+#GROUP Sets
+SetType = 256;
+SetGroups = "";
+SetTime = "Fri Dec 08 08:45:45 2023";
+SetComments = "";
+SetStart = 1;
+SetInc = 1;
+SetSourceSet = "";
+SetViewCallback = "";
+SetLoadCallback = "";
+bpInfoString = "2023-12-08 08:45:46: TIMEFIL information...";

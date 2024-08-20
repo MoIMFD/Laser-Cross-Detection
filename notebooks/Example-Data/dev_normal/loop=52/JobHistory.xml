@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JobSequence>
+	<JobItem Index="0">
+		<SourceIndex>-1</SourceIndex>
+		<Job Identifier="SetProcessing">
+			<Enabled>true</Enabled>
+			<par id="INT" name="StartIndex">
+				<desc>Start index</desc>
+				<value>-1</value>
+			</par>
+			<par id="INT" name="EndIndex">
+				<desc>End index</desc>
+				<value>-1</value>
+			</par>
+			<par id="INT" name="Increment">
+				<desc>Increment</desc>
+				<value>-1</value>
+			</par>
+			<par id="INT" name="FullRange">
+				<desc>Full range</desc>
+				<value>1</value>
+			</par>
+			<StoreMode>3</StoreMode>
+			<StoreName></StoreName>
+			<SetOp Identifier="CL:1:TIMEFIL:-1">
+				<hFilters class="VCH">
+					<value class="STF_MAX" />
+				</hFilters>
+				<m_bConvertOutputToFloat class="int">
+					<value>0</value>
+				</m_bConvertOutputToFloat>
+				<m_bUseFilterLength class="int">
+					<value>0</value>
+				</m_bUseFilterLength>
+				<m_hDataTypeIsFloat class="int">
+					<value>0</value>
+				</m_hDataTypeIsFloat>
+				<m_hOpHandler class="int">
+					<value>20088</value>
+				</m_hOpHandler>
+				<m_hRingBufferIn class="int">
+					<value>0</value>
+				</m_hRingBufferIn>
+				<m_nDirection class="int">
+					<value>0</value>
+				</m_nDirection>
+				<m_nEnd class="int">
+					<value>20</value>
+				</m_nEnd>
+				<m_nFilterLength class="int">
+					<value>5</value>
+				</m_nFilterLength>
+				<m_nFilterLengthInDialog class="int">
+					<value>5</value>
+				</m_nFilterLengthInDialog>
+				<m_nInc class="int">
+					<value>1</value>
+				</m_nInc>
+				<m_nMode class="int">
+					<value>1</value>
+				</m_nMode>
+				<m_nResultSet class="string">
+					<value>D:/Kruemmer/20231124-3D-PTV-Kruemmer/Recording_Date=231206_Time=151304_calib/TimeFilMax_sL=all_01/loop=52</value>
+				</m_nResultSet>
+				<m_nSize class="int">
+					<value>20</value>
+				</m_nSize>
+				<m_nSourceSet class="string">
+					<value>D:/Kruemmer/20231124-3D-PTV-Kruemmer/Recording_Date=231206_Time=151304_calib/loop=52</value>
+				</m_nSourceSet>
+				<m_nStart class="int">
+					<value>1</value>
+				</m_nStart>
+			</SetOp>
+		</Job>
+	</JobItem>
+</JobSequence>
