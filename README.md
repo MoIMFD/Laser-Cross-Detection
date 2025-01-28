@@ -21,14 +21,14 @@ python example.py
 The corresponding output is
 
 ```bash
-Created test image with intersection point at [659.79762583 502.90947781]
+Created test image with intersection point at (659.7976, 502.9095)
 Testing Methods...
 
-        kluwe - [659.8236829  502.95526115]
-        ransac - [659.89846121 502.68817464]
-        hough - [659.91429129 502.34140622]
-        gunady - [660.07210569 503.1892573 ]
-        template_matching - [660.29762583 503.40947781]
+        kluwe              - (659.8237, 502.9553) - error: 0.0527 pixel - took 2.7221 ms
+        ransac             - (659.1877, 501.4849) - error: 1.5497 pixel - took 0.1284 ms
+        hough              - (658.9932, 502.9253) - error: 0.8046 pixel - took 0.0551 ms
+        gunady             - (660.0721, 503.1893) - error: 0.3919 pixel - took 4.0414 ms
+        template_matching  - (660.2976, 503.4095) - error: 0.7071 pixel - took 0.1487 ms
 
 Done
 ```
@@ -40,4 +40,4 @@ The repository provides a testing module `laser_cross_detection.test` which can 
 The noise in the images is created by masking the beams by Perlin noise, adding Perlin noise, adding Salt and Paper noise and by adding Gaussian noise to the Gaussian Intensity Distribution of the beams.
 
 ## Calibration
-To make use of the detections a calibration module `laser_cross_detection.calibration` exists. It supports linear calibration (Direct Linear Transform - DLT) and polynomial calibration using Soloff Polynomials ([Soloff et al. (1997)](https://doi.org/10.1088/0957-0233/8/12/008)). Both approaches support multi camera setups.
+To make use of the detections a calibration module `laser_cross_detection.calibration` exists. It supports linear calibration (Direct Linear Transform - DLT, adapted from [github.com/JD-Canada/Tracker3D](https://github.com/JD-Canada/Tracker3D)) and polynomial calibration using Soloff Polynomials ([Soloff et al. (1997)](https://doi.org/10.1088/0957-0233/8/12/008)). Both approaches support multi camera setups.

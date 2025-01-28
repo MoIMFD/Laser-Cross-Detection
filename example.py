@@ -2,6 +2,7 @@ import laser_cross_detection as lcd
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import namedtuple
+from time import time
 
 beam_parameter = namedtuple("BeamParameter", "width rho theta")
 
@@ -28,7 +29,9 @@ if __name__ == "__main__":
         theta2=beam2.theta,
         offset=(600, 400),
     )
-    print(f"Created test image with intersection point at {intersection}")
+    print(
+        f"Created test image with intersection point at ({intersection[0]:.4f}, {intersection[1]:.4f})"
+    )
 
     template_center, template_offset = np.divmod(intersection, 1)
     window = 50
@@ -60,20 +63,31 @@ if __name__ == "__main__":
     ax.axis(False)
     colors = "red orange green blue cyan".split()
     for i, (name, method) in enumerate(methods.items()):
+        tic = time()
         if name == "gunady":
-            intersection = method(
+            detected_intersection = method(
                 image,
                 p01=(beam1.rho, beam1.width, beam1.theta, 255),
                 p02=(beam2.rho, beam2.width, beam2.theta, 255),
                 threshold=100,
             )
         else:
-            intersection = method(image)
+            detected_intersection = method(image)
+        toc = time()
 
         ax.scatter(
-            *intersection, label=name, fc="none", ec=colors[i], s=(i + 1) * 100
+            *detected_intersection,
+            label=name,
+            fc="none",
+            ec=colors[i],
+            s=(i + 1) * 100,
         )
-        print(f"\t{name} - {intersection}")
+        print(
+            f"\t{name:<18} - "
+            + f"({detected_intersection[0]:.4f}, {detected_intersection[1]:.4f}) - "
+            + f"error: {np.linalg.norm(np.subtract(detected_intersection, intersection)):.4f} pixel - "
+            + f"took {toc - tic:.4f} ms"
+        )
 
     ax.legend()
     plt.show()

@@ -5,6 +5,8 @@ images/
 tmp/
 notebooks_private/
 pytorch_calibration/
+sourcecode-and-supp-material/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -36,7 +36,7 @@ class Hough(DetectionMethodABC):
     """
 
     def __call__(
-        self, arr: nptyping.NDArray, *args, **kwargs
+        self, arr: nptyping.NDArray, seed: int = 0, *args, **kwargs
     ) -> nptyping.NDArray:
         """Takes an image of two intersecting beams and returns the estimated
         point of intersection of the beams.
@@ -49,7 +49,7 @@ class Hough(DetectionMethodABC):
         """
         arr = Hough.binarize_image(arr=arr)
         lines = probabilistic_hough_line(
-            arr, threshold=100, theta=np.linspace(0, PI, 180)
+            arr, threshold=100, theta=np.linspace(0, PI, 360), rng=seed
         )
 
         hess_lines = []
@@ -58,7 +58,9 @@ class Hough(DetectionMethodABC):
             hess_lines.append(HessNormalLine.from_two_points(p1, p0))
 
         angles = [line.angle for line in hess_lines]
-        threshold = (max(angles) + min(angles)) / 2
+        # threshold = (max(angles) + min(angles)) / 2
+
+        threshold = get_angle_threshold(angles)
 
         lines_1, lines_2 = [], []
         for line in hess_lines:
@@ -77,3 +79,12 @@ class Hough(DetectionMethodABC):
         line2 = HessNormalLine(rho2, theta2)
 
         return line1.intersect_crossprod(line2)
+
+
+def get_angle_threshold(angles):
+    # Use histogram to find the two main clusters
+    hist, bins = np.histogram(angles, bins=36)  # 5-degree bins
+    peaks = np.where(hist > np.mean(hist))[0]
+    if len(peaks) >= 2:
+        return (bins[peaks[0]] + bins[peaks[1]]) / 2
+    return np.mean(angles)
