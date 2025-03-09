@@ -9,7 +9,7 @@ import numpy.typing as nptyping
 import scipy.optimize as sopt
 
 
-def make_nd_polynom(*orders: int) -> List[Tuple[str]]:
+def make_nd_polynom(*orders: int) -> List[Tuple[str, ...]]:
     """Creates a mapping of all combinations of parameters for the nd
     polynomial. For example orders = (3, 3, 2), e. g. cubic order in x,
     cubic order in y and quadratic order in z  :
@@ -43,19 +43,12 @@ def make_nd_polynom(*orders: int) -> List[Tuple[str]]:
     max_order = max(orders)
     x = [f"x{i+1}" for i, _ in enumerate(orders)]
     params = [
-        c
-        for i in range(max_order)
-        for c in combinations_with_replacement(x, r=i + 1)
+        c for i in range(max_order) for c in combinations_with_replacement(x, r=i + 1)
     ]
     return [
         param
         for param in params
-        if all(
-            [
-                Counter(param)[f"x{i+1}"] <= order
-                for i, order in enumerate(orders)
-            ]
-        )
+        if all([Counter(param)[f"x{i+1}"] <= order for i, order in enumerate(orders)])
     ]
 
 
@@ -132,9 +125,7 @@ class SoloffPolynom:
         Returns:
             self: returns the instance
         """
-        popt, pcov = sopt.curve_fit(
-            self.fn_opt, xyz, u, p0=self.a, method="lm"
-        )
+        popt, pcov = sopt.curve_fit(self.fn_opt, xyz, u, p0=self.a, method="lm")
         self.a = np.asarray(popt)
         return self
 
