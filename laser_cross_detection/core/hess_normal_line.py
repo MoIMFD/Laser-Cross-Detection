@@ -126,9 +126,7 @@ class HessNormalLine:
 
     @property
     def direction_vector(self) -> np.ndarray:
-        return np.array(
-            [np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)]
-        )
+        return np.array([np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)])
 
     def plot_slope(self, axis, *args, **kwds):
         return axis.axline(self.normal_point, slope=self.slope, *args, **kwds)

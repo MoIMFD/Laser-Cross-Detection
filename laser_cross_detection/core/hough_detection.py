@@ -49,7 +49,10 @@ class Hough(DetectionMethodABC):
         """
         arr = Hough.binarize_image(arr=arr)
         lines = probabilistic_hough_line(
-            arr, threshold=100, theta=np.linspace(0, PI, 360), rng=seed
+            arr,
+            threshold=100,
+            theta=np.linspace(0, PI, 360),
+            rng=seed,
         )
 
         hess_lines = []
