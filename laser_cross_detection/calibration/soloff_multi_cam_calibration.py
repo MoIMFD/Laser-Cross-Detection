@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Tuple, Optional, Dict, Union, Callable
 
 import numpy as np
 import numpy.typing as nptyping
@@ -10,81 +10,290 @@ from . import SoloffCamCalibration
 
 @dataclass
 class SoloffMultiCamCalibration:
-    """Container for all single camera calibrations in a multi camera setup.
-    Provides a method to predict points in world space (x, y, z) based on
-    image coordinates (u, v) for all cameras.
+    """Enhanced container for managing a multi-camera calibration system.
 
-    Returns:
-        _type_: SoloffMultiCamCalibration
+    Provides improved methods for triangulation, uncertainty estimation, and
+    optimization of 3D reconstruction from multiple camera views.
     """
 
-    single_cam_calibrations: List[SoloffCamCalibration] = field(
-        default_factory=set()
+    single_cam_calibrations: List[SoloffCamCalibration] = field(default_factory=list)
+
+    # Optimization configuration with sensible defaults
+    optimization_config: Dict = field(
+        default_factory=lambda: {
+            "method": "Powell",
+            "options": {"maxiter": 1000, "ftol": 1e-6, "xtol": 1e-6},
+            "bounds": None,
+        }
     )
-    opt_method: str = "Powell"
 
     def add_calibration(self, calibration: SoloffCamCalibration):
-        """Adds a single camera calibration to the multi camera calibration
-        object.
+        """Add a single camera calibration to the system.
 
         Args:
-            calibration (SoloffCamCalibration): single camera calibration
+            calibration: Single camera calibration to add
 
         Returns:
-            _type_: self
+            self: For method chaining
         """
-        self.single_cam_calibrations.add(calibration)
+        self.single_cam_calibrations.append(calibration)
         return self
 
-    def __call__(
-        self, xyz: nptyping.NDArray[np.float64]
-    ) -> List[nptyping.NDArray[np.float64]]:
-        """Calculates the pixel coordinates for each single camera calibration
-        in the multi camera set for given points in world space (x, y, z)
+    def __call__(self, xyz: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
+        """Project 3D points to all cameras (vectorized operation).
 
         Args:
-            xyz (nptyping.NDArray[np.float64]): points in world space (x, y, z)
+            xyz: World coordinates to project
 
         Returns:
-            List[nptyping.NDArray[np.float64]]: respective point in image
-                space (u, v) of each camera
+            List of (u,v) tuples for each camera
         """
-        return [calib(xyz) for calib in self.single_cam_calibrations]
+        return [calibration(xyz) for calibration in self.single_cam_calibrations]
 
     def calculate_point(
-        self, *, us: List[float], vs: List[float], x0: List[float]
-    ) -> nptyping.NDArray[np.float64]:
-        """Calculates the point in world space best fitting the given image
-        coordinates for each camera in the multi camera set. Calculation is
-        based on minimizing the sum of the reprojection errors.
+        self,
+        us: List[Union[float, np.ndarray]],
+        vs: List[Union[float, np.ndarray]],
+        x0: Optional[np.ndarray] = None,
+        weights: Optional[np.ndarray] = None,
+        method: Optional[str] = None,
+        full_output: bool = False,
+    ) -> Union[np.ndarray, Tuple[np.ndarray, Dict]]:
+        """Calculate 3D position from multiple camera views with improved optimization.
 
         Args:
-            us (List[float]): list of u image coordinates for each camera
-            vs (List[float]): list of v image coordinates for each camera
-            x0 (List[float]): initial guess in world coordinates (x, y, z)
+            us: List of u coordinates for each camera
+            vs: List of v coordinates for each camera
+            x0: Initial guess (defaults to [0,0,0] if None)
+            weights: Optional weights for each camera (for handling reliability differences)
+            method: Override optimization method (uses config default if None)
+            full_output: Whether to return optimization details
 
         Returns:
-            nptyping.NDArray[np.float64]: _description_
+            Reconstructed 3D point (and optimization details if full_output=True)
         """
-        assert (
-            len(us) == len(vs) == len(self.single_cam_calibrations)
-        ), "Number of image coordinates does not match number of cameras in calibration"
+        if len(us) != len(vs) or len(us) != len(self.single_cam_calibrations):
+            raise ValueError("Number of coordinates must match number of cameras")
 
-        def opt_fun(
-            xyz: nptyping.NDArray[np.float64],
-        ) -> float:
-            xyz = [xyz]
-            return np.sqrt(
-                np.sum(
-                    [
-                        (calibration.soloff_u(xyz) - u) ** 2
-                        + (calibration.soloff_v(xyz) - v) ** 2
-                        for calibration, u, v in zip(
-                            self.single_cam_calibrations, us, vs
-                        )
-                    ]
-                )
-            )
+        # Default initial guess at origin if not provided
+        if x0 is None:
+            x0 = np.zeros(3)
 
-        res = sopt.minimize(opt_fun, x0=x0, method=self.opt_method)
-        return res.x
+        # Default weights to equal if not provided
+        if weights is None:
+            weights = np.ones(len(us))
+        elif len(weights) != len(us):
+            raise ValueError("Number of weights must match number of cameras")
+
+        # Create vectorized cost function for better performance
+        def reprojection_cost(xyz_flat):
+            xyz = xyz_flat.reshape(1, 3)  # Reshape for vectorized operations
+
+            # Calculate squared reprojection errors for all cameras at once
+            total_error = 0.0
+            for i, (calibration, u, v, weight) in enumerate(
+                zip(self.single_cam_calibrations, us, vs, weights)
+            ):
+                # Project 3D point to camera
+                u_pred, v_pred = calibration(xyz)
+
+                # Calculate weighted squared error
+                cam_error = ((u_pred - u) ** 2 + (v_pred - v) ** 2) * weight
+                total_error += cam_error
+
+            return np.sqrt(total_error)
+
+        # Get optimization method (use override or config)
+        opt_method = method if method else self.optimization_config["method"]
+
+        # Run optimization
+        result = sopt.minimize(
+            reprojection_cost,
+            x0=x0,
+            method=opt_method,
+            bounds=self.optimization_config.get("bounds"),
+            options=self.optimization_config.get("options", {}),
+        )
+
+        # Return result based on full_output flag
+        if full_output:
+            return result.x, {
+                "success": result.success,
+                "reprojection_error": result.fun,
+                "iterations": result.nit if hasattr(result, "nit") else None,
+                "message": result.message,
+            }
+        else:
+            return result.x
+
+    def triangulate_points(
+        self,
+        point_correspondences: List[Tuple[List[float], List[float]]],
+        initial_guess: Optional[np.ndarray] = None,
+        weights: Optional[List[np.ndarray]] = None,
+    ) -> np.ndarray:
+        """Triangulate multiple points from corresponding image coordinates.
+
+        Args:
+            point_correspondences: List of (us, vs) tuples where each us and vs
+                                   is a list of coordinates across all cameras
+            initial_guess: Optional initial guess for all points
+            weights: Optional weights for each point's cameras
+
+        Returns:
+            Array of 3D points
+        """
+        n_points = len(point_correspondences)
+        result = np.zeros((n_points, 3))
+
+        # Process each point
+        for i, (us, vs) in enumerate(point_correspondences):
+            # Get initial guess for this point
+            x0 = initial_guess[i] if initial_guess is not None else None
+
+            # Get weights for this point
+            w = weights[i] if weights is not None else None
+
+            # Triangulate point
+            result[i] = self.calculate_point(us, vs, x0=x0, weights=w)
+
+        return result
+
+    def estimate_uncertainty(
+        self,
+        point_3d: np.ndarray,
+        us: List[float],
+        vs: List[float],
+        confidence: float = 0.95,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Estimate uncertainty of the reconstructed 3D point.
+
+        Uses local Jacobian approximation to estimate uncertainty ellipsoid.
+
+        Args:
+            point_3d: Reconstructed 3D point
+            us, vs: Image coordinates used for reconstruction
+            confidence: Confidence level (e.g., 0.95 for 95% confidence)
+
+        Returns:
+            Tuple of (principal_axes, axis_lengths) of uncertainty ellipsoid
+        """
+        # Convert point to proper shape
+        point_3d = np.array(point_3d).reshape(3)
+
+        # Calculate Jacobian matrix using finite differences
+        epsilon = 1e-5
+        jacobian = np.zeros((2 * len(self.single_cam_calibrations), 3))
+
+        # For each dimension (x, y, z)
+        for i in range(3):
+            # Perturb in this dimension
+            delta = np.zeros(3)
+            delta[i] = epsilon
+
+            # Forward difference
+            point_plus = point_3d + delta
+            projections_plus = self(point_plus.reshape(1, 3))
+
+            # Extract all u, v coordinates
+            uv_plus = []
+            for u_plus, v_plus in projections_plus:
+                uv_plus.extend([u_plus[0], v_plus[0]])
+            uv_plus = np.array(uv_plus)
+
+            # Backward difference
+            point_minus = point_3d - delta
+            projections_minus = self(point_minus.reshape(1, 3))
+
+            # Extract all u, v coordinates
+            uv_minus = []
+            for u_minus, v_minus in projections_minus:
+                uv_minus.extend([u_minus[0], v_minus[0]])
+            uv_minus = np.array(uv_minus)
+
+            # Calculate derivative
+            jacobian[:, i] = (uv_plus - uv_minus) / (2 * epsilon)
+
+        # Flatten observed coordinates
+        uv_observed = []
+        for u, v in zip(us, vs):
+            uv_observed.extend([u, v])
+        uv_observed = np.array(uv_observed)
+
+        # Project current estimate
+        projections = self(point_3d.reshape(1, 3))
+        uv_estimated = []
+        for u_est, v_est in projections:
+            uv_estimated.extend([u_est[0], v_est[0]])
+        uv_estimated = np.array(uv_estimated)
+
+        # Calculate residuals
+        residuals = uv_observed - uv_estimated
+
+        # Estimate measurement error (variance in image space)
+        sigma_sq = np.mean(residuals**2)
+
+        # Calculate covariance matrix in 3D space
+        # Using pseudo-inverse for potentially under-constrained systems
+        J_pinv = np.linalg.pinv(jacobian)
+        cov_matrix = sigma_sq * (J_pinv @ J_pinv.T)
+
+        # Eigendecomposition to get uncertainty ellipsoid
+        eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+
+        # Scale for confidence interval
+        from scipy import stats
+
+        chi2_val = stats.chi2.ppf(confidence, df=3)
+        axis_lengths = np.sqrt(eigenvalues * chi2_val)
+
+        return eigenvectors, axis_lengths
+
+    def get_system_report(self) -> str:
+        """Generate a comprehensive report of the multi-camera system."""
+        if not self.single_cam_calibrations:
+            return "No cameras in the system."
+
+        num_cameras = len(self.single_cam_calibrations)
+
+        # System overview
+        report = [
+            f"=== Soloff Multi-Camera System Report ===",
+            f"Number of cameras: {num_cameras}",
+            f"Optimization method: {self.optimization_config['method']}",
+            "",
+        ]
+
+        # Add individual camera reports
+        for i, cam in enumerate(self.single_cam_calibrations):
+            report.append(f"--- Camera {i+1}: {cam.camera_id} ---")
+            report.append(cam.get_report())
+            report.append("")
+
+        return "\n".join(report)
+
+    def save_calibration(self, filename: str):
+        """Save the multi-camera calibration to a file.
+
+        Args:
+            filename: Path to save the calibration
+        """
+        import pickle
+
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load_calibration(cls, filename: str) -> "SoloffMultiCamCalibration":
+        """Load a multi-camera calibration from a file.
+
+        Args:
+            filename: Path to the saved calibration
+
+        Returns:
+            Loaded calibration object
+        """
+        import pickle
+
+        with open(filename, "rb") as f:
+            return pickle.load(f)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Callable
+from typing import Tuple, List, Callable, Optional
 from itertools import combinations_with_replacement
 from collections import Counter
 import functools
@@ -8,220 +8,273 @@ import numpy as np
 import numpy.typing as nptyping
 import scipy.optimize as sopt
 
-
-def make_nd_polynom(*orders: int) -> List[Tuple[str, ...]]:
-    """Creates a mapping of all combinations of parameters for the nd
-    polynomial. For example orders = (3, 3, 2), e. g. cubic order in x,
-    cubic order in y and quadratic order in z  :
-                [('x1',),
-                 ('x2',),
-                 ('x3',),
-                 ('x1', 'x1'),
-                 ('x1', 'x2'),
-                 ('x1', 'x3'),
-                 ('x2', 'x2'),
-                 ('x2', 'x3'),
-                 ('x3', 'x3'),
-                 ('x1', 'x1', 'x1'),
-                 ('x1', 'x1', 'x2'),
-                 ('x1', 'x1', 'x3'),
-                 ('x1', 'x2', 'x2'),
-                 ('x1', 'x2', 'x3'),
-                 ('x1', 'x3', 'x3'),
-                 ('x2', 'x2', 'x2'),
-                 ('x2', 'x2', 'x3'),
-                 ('x2', 'x3', 'x3')]
-    Using a mapping (dict) these can be replaced by actual values. The
-    variable names are x1 to xn, where n is the number of provided arguments.
-
-    Args:
-        orders (int): polynomial order in respective dimension
-
-    Returns:
-        List[Tuple[str]]: Terms of the polynomial with the specified orders
-    """
-    max_order = max(orders)
-    x = [f"x{i+1}" for i, _ in enumerate(orders)]
-    params = [
-        c for i in range(max_order) for c in combinations_with_replacement(x, r=i + 1)
-    ]
-    return [
-        param
-        for param in params
-        if all([Counter(param)[f"x{i+1}"] <= order for i, order in enumerate(orders)])
-    ]
+from .polynom_basis import PolynomialBasis
 
 
 @dataclass
 class SoloffPolynom:
-    """Container representing Soloff polynomials and methods used to fit
-    the coefficients. The Soloff polynomial can be used to create a mapping
-    between a single image coordinate and world (x, y, z) coordinates.
+    """
+    Enhanced Soloff polynomial using NumPy's polynomial capabilities.
 
-    Raises:
-        ValueError: Is raised when the inputs do not comply with the
-            expected shape, e.g.: x, y, z or np.array([x, y, z])
-            or np.array([[x], [y], [z]]) in the __call__ method
-
-    Returns:
-        _type_: SoloffPolynomial
+    This implementation leverages NumPy's efficient polynomial operations
+    and provides a clean mathematical representation of the polynomial.
     """
 
     x_order: int
     y_order: int
     z_order: int
-    a: nptyping.NDArray[np.float64] = None
+    a: Optional[np.ndarray] = None
 
     def __post_init__(self):
+        # Initialize the polynomial basis
+        self.basis = PolynomialBasis(self.x_order, self.y_order, self.z_order)
+
+        # Initialize coefficients
         if self.a is None:
-            self.a = np.ones(len(self.polynom) + 1)
+            self.a = np.zeros(len(self.basis))
+            self.a[0] = 1.0  # Set constant term to 1
         else:
-            self.a = np.asarray(
-                self.a
-            ).flatten()  # use flatten to make sure array is copied
+            self.a = np.asarray(self.a).flatten()
 
-    def __call__(
-        self, *args: nptyping.NDArray[np.float64]
-    ) -> nptyping.NDArray[np.float64]:
-        """Calculates the pixel coordinates (u, v) from a point in space
-        (x, y, z). The x, y, z coordinates are expected to be passed
-        individually or in a single numpy array.
+            # Ensure coefficients match basis size
+            if len(self.a) != len(self.basis):
+                raise ValueError(
+                    f"Expected {len(self.basis)} coefficients, got {len(self.a)}"
+                )
 
-        Raises:
-            ValueError: Is raised when the inputs do not comply with the
-            expected shape, e.g.: x, y, z or np.array([x, y, z])
-            or np.array([[x], [y], [z]])
+    def __call__(self, *args) -> np.ndarray:
+        """
+        Evaluate the polynomial at given points.
+
+        Args can be:
+            - x, y, z as separate arrays
+            - A single array of shape [3, n_points]
+            - A single array of shape [n_points, 3]
 
         Returns:
-            nptyping.NDArray[np.float64]: Pixel coordinates computed by
-            the underlying Soloff polynomial.
+            np.ndarray: Polynomial values
         """
+        # Process input coordinates
         if len(args) == 3:
-            M = self.build_m(*args)
+            # Individual x, y, z arrays
+            x, y, z = args
         elif len(args) == 1:
-            xyz = np.array(args)
-            try:
-                M = self.build_m(*xyz)
-            except TypeError:
-                M = self.build_m(*xyz.T)
+            # Single array containing xyz coordinates
+            xyz = np.asarray(args[0])
+
+            if xyz.ndim == 1 and len(xyz) == 3:
+                # Single point [x, y, z]
+                x = np.array([xyz[0]])
+                y = np.array([xyz[1]])
+                z = np.array([xyz[2]])
+            elif xyz.shape[0] == 3:
+                # Array of shape [3, n_points]
+                x, y, z = xyz
+            else:
+                # Array of shape [n_points, 3]
+                x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
         else:
-            raise ValueError("Invalid number of Arguments")
-        return np.matmul(M, self.a)
+            raise ValueError("Invalid input format")
 
-    def fit_curve_fit(
-        self,
-        xyz: nptyping.NDArray[np.float64],
-        u: nptyping.NDArray[np.float64],
-    ):
-        """Fits the parameter of the Soloff polynomial using the
-        scipy.optimize.curve_fit function.
+        # Evaluate basis functions
+        design_matrix = self.basis.evaluate(x, y, z)
+
+        # Compute polynomial value
+        return design_matrix @ self.a
+
+    def fit_direct(self, xyz: np.ndarray, u: np.ndarray) -> "SoloffPolynom":
+        """
+        Fit polynomial coefficients using direct linear solving.
 
         Args:
-            xyz (nptyping.NDArray[np.float64]): xyz world coordinates of
-                calibration points
-            u (nptyping.NDArray[np.float64]): u image coordinates of
-                calibration points
+            xyz: Coordinates, shape [n_points, 3] or [3, n_points]
+            u: Target values, shape [n_points]
 
         Returns:
-            self: returns the instance
+            self: Updated instance with fitted coefficients
         """
-        popt, pcov = sopt.curve_fit(self.fn_opt, xyz, u, p0=self.a, method="lm")
-        self.a = np.asarray(popt)
+        # Extract coordinates
+        if xyz.shape[0] == 3:
+            x, y, z = xyz
+        else:
+            x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+
+        # Build design matrix
+        design_matrix = self.basis.evaluate(x, y, z)
+
+        # Solve linear system directly using NumPy's least squares
+        self.a, residuals, rank, s = np.linalg.lstsq(design_matrix, u, rcond=None)
+
         return self
 
-    def fit_least_squares(
-        self,
-        xyz: nptyping.NDArray[np.float64],
-        u: nptyping.NDArray[np.float64],
-    ):
-        """Fits the parameter of the Soloff polynomial using the
-        scipy.optimize.least_squares function.
+    def fit_regularized(
+        self, xyz: np.ndarray, u: np.ndarray, alpha: float = 0.1
+    ) -> "SoloffPolynom":
+        """
+        Fit polynomial coefficients using direct linear solving.
 
         Args:
-            xyz (nptyping.NDArray[np.float64]): xyz world coordinates of
-                calibration points
-            u (nptyping.NDArray[np.float64]): u image coordinates of
-                calibration points
+            xyz: Coordinates, shape [n_points, 3] or [3, n_points]
+            u: Target values, shape [n_points]
+            alpha:
 
         Returns:
-            self: returns the instance
+            self: Updated instance with fitted coefficients
         """
-        result = sopt.least_squares(self.fn_opt_ls(xyz, u), x0=self.a)
-        self.a = np.asarray(result.x)
+        if alpha < 0:
+            import warnings
+
+            warnings.warn(
+                f"Negative regularization parameter ({alpha}) is invalid and may cause "
+                f"numerical instability. Using abs({alpha}) instead."
+            )
+            alpha = abs(alpha)
+
+        EPSILON = 1e-10
+
+        if abs(alpha) < EPSILON:
+            return self.fit_direct(xyz, u)
+
+        # Extract coordinates
+        if xyz.shape[0] == 3:
+            x, y, z = xyz
+        else:
+            x, y, z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+
+        # Build design matrix
+        A = self.basis.evaluate(x, y, z)
+
+        ATA = A.T @ A
+        reg_matrix = alpha * np.eye(ATA.shape[0])
+
+        # don't regularize the constant term
+        reg_matrix[0, 0] = 0
+        ATu = A.T @ u
+        self.a = np.linalg.solve(ATA + reg_matrix, ATu)
+
         return self
 
-    @functools.cached_property
-    def polynom(self) -> List[Tuple[str]]:
-        """Definition of the variable coefficients of the Soloff respective
-        polynmial.
-
-        Returns:
-            List[Tuple[str]]: variable coefficients of the Soloff polynomial
+    def fit_curve_fit(self, xyz: np.ndarray, u: np.ndarray) -> "SoloffPolynom":
         """
-        return make_nd_polynom(self.x_order, self.y_order, self.z_order)
-
-    def fn_opt_ls(
-        self,
-        xyz: nptyping.NDArray[np.float64],
-        u: nptyping.NDArray[np.float64],
-    ) -> Callable:
-        """Builds the optimization function used for least_squares fit of
-        polynomial coefficients.
+        Fit polynomial coefficients using scipy's curve_fit.
 
         Args:
-            xyz (nptyping.NDArray[np.float64]): xyz world coordinates of
-                calibration points
-            u (nptyping.NDArray[np.float64]): u image coordinates of
-                calibration points
+            xyz: Coordinates, shape [n_points, 3] or [3, n_points]
+            u: Target values, shape [n_points]
 
         Returns:
-            Callable: function used for least_squares fit
+            self: Updated instance with fitted coefficients
         """
 
-        def f(a):
-            s = self.fn_opt(xyz, *a)
-            return s - u
+        def model_func(xyz, *params):
+            self.a = np.array(params)
+            return self(xyz)
 
-        return f
+        initial_params = self.a if self.a is not None else np.ones(len(self.basis))
+        popt, pcov = sopt.curve_fit(model_func, xyz, u, p0=initial_params)
 
-    def fn_opt(
-        self, xyz: nptyping.NDArray[np.float64], *a: float
-    ) -> nptyping.NDArray[np.float64]:
-        """Optimization function used for scipy.optimize.curve_fit to fit
-        the polynomial coefficients.
+        self.a = popt
+        return self
+
+    def get_symbolic_representation(self) -> str:
+        """
+        Get a human-readable representation of the polynomial.
+
+        Returns:
+            str: Symbolic formula with coefficients
+        """
+        terms = self.basis.get_symbolic_terms(["x", "y", "z"])
+        result = []
+
+        for i, (term, coef) in enumerate(zip(terms, self.a)):
+            if abs(coef) < 1e-10:  # Skip near-zero coefficients
+                continue
+
+            if i == 0:  # Constant term
+                result.append(f"{coef:.4f}")
+            elif coef > 0:
+                result.append(f"+ {coef:.4f}·{term}")
+            else:
+                result.append(f"- {abs(coef):.4f}·{term}")
+
+        if not result:
+            return "0"
+
+        return " ".join(result)
+
+    def derive(self, dimension: int) -> "SoloffPolynomNumpy":
+        """
+        Compute the derivative of the polynomial with respect to a dimension.
 
         Args:
-            xyz (nptyping.NDArray[np.float64]): xyz world coordinates of
-                calibration points
-            a (float): parameters of the Soloff polynomial
+            dimension: 0 for x, 1 for y, 2 for z
 
         Returns:
-            nptyping.NDArray[np.float64]: u image coordinates
+            SoloffPolynom: New polynomial representing the derivative
         """
-        self.a = np.asarray(a)
-        return self.__call__(xyz)
+        if dimension < 0 or dimension >= 3:
+            raise ValueError("Dimension must be 0 (x), 1 (y), or 2 (z)")
 
-    def build_m(
-        self,
-        x1: nptyping.NDArray[np.float64],
-        x2: nptyping.NDArray[np.float64],
-        x3: nptyping.NDArray[np.float64],
-    ) -> nptyping.NDArray[np.float64]:
-        """Builds the variable coefficient matrix of the Soloff polynomial
-        using actual coordinates x1, x2, x3 (x, y, z).
+        # Create new polynomial with same orders
+        deriv_poly = SoloffPolynom(self.x_order, self.y_order, self.z_order)
+        deriv_coeffs = np.zeros_like(self.a)
+
+        # For each term in the original polynomial
+        for i, powers in enumerate(self.basis.powers()):
+            power = powers[dimension]
+
+            if power > 0:
+                # Find the corresponding term with power-1 in the target dimension
+                new_powers = list(powers)
+                new_powers[dimension] -= 1
+                new_powers = tuple(new_powers)
+
+                # Find this term in the basis
+                try:
+                    j = self.basis.powers().index(new_powers)
+                    deriv_coeffs[j] += self.a[i] * power
+                except ValueError:
+                    # Term not in basis (shouldn't happen with proper basis)
+                    pass
+
+        deriv_poly.a = deriv_coeffs
+        return deriv_poly
+
+    def integrate(self, dimension: int) -> "SoloffPolynom":
+        """
+        Compute the indefinite integral of the polynomial with respect to a dimension.
 
         Args:
-            x1 (nptyping.NDArray[np.float64]): first world coordinate
-            x2 (nptyping.NDArray[np.float64]): second world coordinate
-            x3 (nptyping.NDArray[np.float64]): third world coordinate
+            dimension: 0 for x, 1 for y, 2 for z
 
         Returns:
-            nptyping.NDArray[np.float64]: matrix of variable coefficients
-                according to underlying Soloff polynomial
+            SoloffPolynom: New polynomial representing the integral
         """
-        mapping = {"x1": x1, "x2": x2, "x3": x3}
-        m = [
-            np.prod([mapping[param] for param in params], axis=0)
-            for params in self.polynom
-        ]
-        return np.hstack([np.ones_like(x1), *m])
+        if dimension < 0 or dimension >= 3:
+            raise ValueError("Dimension must be 0 (x), 1 (y), or 2 (z)")
+
+        # We may need higher order for integration
+        new_orders = list(self.basis.orders)
+        new_orders[dimension] += 1
+
+        # Create new polynomial with increased order in the integration dimension
+        int_poly = SoloffPolynom(*new_orders)
+        int_coeffs = np.zeros(len(int_poly.basis))
+
+        # For each term in the original polynomial
+        for i, powers in enumerate(self.basis.powers()):
+            # New power in the integration dimension
+            new_powers = list(powers)
+            new_powers[dimension] += 1
+            new_powers = tuple(new_powers)
+
+            # Find this term in the new basis
+            try:
+                j = int_poly.basis.powers().index(new_powers)
+                int_coeffs[j] = self.a[i] / new_powers[dimension]
+            except ValueError:
+                # Term not in new basis (shouldn't happen with proper basis)
+                pass
+
+        int_poly.a = int_coeffs
+        return int_poly
