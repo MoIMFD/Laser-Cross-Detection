@@ -1,8 +1,9 @@
 import numpy as np
 import numpy.typing as nptyping
 from skimage.transform import probabilistic_hough_line
+from sklearn.cluster import KMeans
 
-from .hess_normal_line import HessNormalLine
+from .hess_normal_line import HessNormalLine, ComplexHessLine
 from .detection_abc import DetectionMethodABC
 
 PI = np.pi
@@ -19,9 +20,10 @@ def average_angles(angles: nptyping.NDArray) -> float:
     Returns:
         float: average angle in radians
     """
-    z = np.exp(1j * np.array(angles))
+    angles = np.array(angles) * 2
+    z = np.exp(1j * angles)
     z_mean = np.mean(z)
-    return np.angle(z_mean)
+    return np.angle(z_mean) / 2
 
 
 class Hough(DetectionMethodABC):
@@ -36,7 +38,12 @@ class Hough(DetectionMethodABC):
     """
 
     def __call__(
-        self, arr: nptyping.NDArray, seed: int = 0, *args, **kwargs
+        self,
+        arr: nptyping.NDArray,
+        seed: int = 0,
+        return_lines: bool = False,
+        *args,
+        **kwargs,
     ) -> nptyping.NDArray:
         """Takes an image of two intersecting beams and returns the estimated
         point of intersection of the beams.
@@ -48,46 +55,49 @@ class Hough(DetectionMethodABC):
             nptyping.NDArray: point of intersection (2d)
         """
         arr = Hough.binarize_image(arr=arr)
-        lines = probabilistic_hough_line(
+        image_center = np.array(arr.shape[::-1]) / 2
+        point_pairs = probabilistic_hough_line(
             arr,
             threshold=100,
-            theta=np.linspace(0, PI, 360),
+            theta=np.linspace(0, PI, 360, endpoint=False),
             rng=seed,
         )
 
         hess_lines = []
-        for line in lines:
+        for line in point_pairs:
             p0, p1 = line
-            hess_lines.append(HessNormalLine.from_two_points(p1, p0))
+            hess_lines.append(
+                ComplexHessLine.from_two_points(p1, p0, center=image_center)
+            )
 
         angles = [line.angle for line in hess_lines]
-        # threshold = (max(angles) + min(angles)) / 2
 
-        threshold = get_angle_threshold(angles)
+        labels, _ = group_angles(angles)
 
-        lines_1, lines_2 = [], []
-        for line in hess_lines:
-            if line.angle < threshold:
-                lines_1.append(line)
-            else:
-                lines_2.append(line)
+        lines_1 = [line for line, label in zip(hess_lines, labels) if label == 0]
+        lines_2 = [line for line, label in zip(hess_lines, labels) if label == 1]
 
-        rho1 = np.mean([line.distance for line in lines_1])
-        theta1 = average_angles([[line.angle for line in lines_1]])
+        line1 = ComplexHessLine.from_averaged_lines(lines_1)
+        line2 = ComplexHessLine.from_averaged_lines(lines_2)
 
-        rho2 = np.mean([line.distance for line in lines_2])
-        theta2 = average_angles([[line.angle for line in lines_2]])
-
-        line1 = HessNormalLine(rho1, theta1)
-        line2 = HessNormalLine(rho2, theta2)
-
-        return line1.intersect_crossprod(line2)
+        if return_lines:
+            return (
+                line1.intersect(line2),
+                line1,
+                line2,
+            )
+        else:
+            return line1.intersect_crossprod(line2)
 
 
-def get_angle_threshold(angles):
-    # Use histogram to find the two main clusters
-    hist, bins = np.histogram(angles, bins=36)  # 5-degree bins
-    peaks = np.where(hist > np.mean(hist))[0]
-    if len(peaks) >= 2:
-        return (bins[peaks[0]] + bins[peaks[1]]) / 2
-    return np.mean(angles)
+def group_angles(angles, n_groups=2):
+    angles = 2 * np.array(angles)
+    points = np.column_stack((np.cos(angles), np.sin(angles)))
+
+    kmeans = KMeans(n_clusters=n_groups, random_state=0)
+    labels = kmeans.fit_predict(points)
+
+    centers = kmeans.cluster_centers_
+    center_angles = np.arctan2(centers[:, 1], centers[:, 0]) / 2
+
+    return labels, center_angles

@@ -1,4 +1,4 @@
-from .hess_normal_line import HessNormalLine
+from .hess_normal_line import HessNormalLine, ComplexHessLine
 from .kluwe_detection import Kluwe
 from .kluwe_radon_detection import KluweRadon
 from .hough_detection import Hough

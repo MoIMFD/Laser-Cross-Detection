@@ -7,7 +7,7 @@ import skimage as ski
 from collections import namedtuple
 from typing import Union, Tuple
 
-from .hess_normal_line import HessNormalLine
+from .hess_normal_line import HessNormalLine, ComplexHessLine
 from .detection_abc import DetectionMethodABC
 from ..utils import image_utils
 
@@ -80,7 +80,7 @@ class Kluwe(DetectionMethodABC):
     def __call__(
         self,
         image: nptyping.NDArray,
-        return_beam_params: bool = False,
+        return_lines: bool = False,
         *args,
         **kwds,
     ) -> nptyping.NDArray:
@@ -97,21 +97,17 @@ class Kluwe(DetectionMethodABC):
 
         beam_params = dict(beam0=dict(), beam1=dict())
         angle_0, angle_1 = self.calc_angles(arr=image, method=self.optimization_method)
-        beam_params["beam0"]["angle"] = angle_0
-        beam_params["beam1"]["angle"] = angle_1
 
         # calculate radius
         radius_0 = self.calc_radius(image, angle_0)
         radius_1 = self.calc_radius(image, angle_1)
-        beam_params["beam0"]["radius"] = radius_0
-        beam_params["beam1"]["radius"] = radius_1
 
-        beam0 = HessNormalLine.from_degrees(radius_0, angle_0, center=image_center)
-        beam1 = HessNormalLine.from_degrees(radius_1, angle_1, center=image_center)
+        line0 = ComplexHessLine.from_degrees(radius_0, angle_0, center=image_center)
+        line1 = ComplexHessLine.from_degrees(radius_1, angle_1, center=image_center)
 
-        intersection = beam0.intersect_crossprod(beam1)
-        if return_beam_params:
-            return intersection, beam_params
+        intersection = line0.intersect(line1)
+        if return_lines:
+            return intersection, line0, line1
         else:
             return intersection
 
