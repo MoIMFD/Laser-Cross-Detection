@@ -2,12 +2,11 @@ import numpy as np
 import numpy.typing as nptyping
 import lmfit
 import scipy
-import skimage as ski
 
 from collections import namedtuple
-from typing import Union, Tuple
+from typing import Tuple
 
-from .hess_normal_line import HessNormalLine, ComplexHessLine
+from .hess_normal_line import ComplexHessLine
 from .detection_abc import DetectionMethodABC
 from ..utils import image_utils
 
@@ -95,15 +94,20 @@ class Kluwe(DetectionMethodABC):
         """
         image_center = np.array(image.shape[::-1]) / 2
 
-        beam_params = dict(beam0=dict(), beam1=dict())
-        angle_0, angle_1 = self.calc_angles(arr=image, method=self.optimization_method)
+        angle_0, angle_1 = self.calc_angles(
+            arr=image, method=self.optimization_method
+        )
 
         # calculate radius
         radius_0 = self.calc_radius(image, angle_0)
         radius_1 = self.calc_radius(image, angle_1)
 
-        line0 = ComplexHessLine.from_degrees(radius_0, angle_0, center=image_center)
-        line1 = ComplexHessLine.from_degrees(radius_1, angle_1, center=image_center)
+        line0 = ComplexHessLine.from_degrees(
+            radius_0, angle_0, center=image_center
+        )
+        line1 = ComplexHessLine.from_degrees(
+            radius_1, angle_1, center=image_center
+        )
 
         intersection = line0.intersect(line1)
         if return_lines:
@@ -111,7 +115,9 @@ class Kluwe(DetectionMethodABC):
         else:
             return intersection
 
-    def calc_angles(self, arr: nptyping.NDArray, method="Brent") -> Tuple[float, float]:
+    def calc_angles(
+        self, arr: nptyping.NDArray, method="Brent"
+    ) -> Tuple[float, float]:
         """Calculates the angles of two beams present in a image.
 
         Args:
@@ -160,7 +166,9 @@ class Kluwe(DetectionMethodABC):
 
         elif method in ["Brent", "Golden"]:
             res_0 = scipy.optimize.minimize_scalar(
-                fun=lambda angle: optimization_loss_function_scalar(angle, arr),
+                fun=lambda angle: optimization_loss_function_scalar(
+                    angle, arr
+                ),
                 bracket=[
                     guess[0] - self.angle_step_size / 2,
                     guess[0],
@@ -171,7 +179,9 @@ class Kluwe(DetectionMethodABC):
             angle_0 = res_0.x
 
             res_1 = scipy.optimize.minimize_scalar(
-                fun=lambda angle: optimization_loss_function_scalar(angle, arr),
+                fun=lambda angle: optimization_loss_function_scalar(
+                    angle, arr
+                ),
                 bracket=[
                     guess[1] - self.angle_step_size / 2,
                     guess[1],
@@ -197,7 +207,9 @@ class Kluwe(DetectionMethodABC):
             float: radius of the beam, e. g. the distance from the center
         """
         intensity_profile = self.collapse_arr(arr, angle)
-        projection_axis = np.arange(intensity_profile.size) - intensity_profile.size / 2
+        projection_axis = (
+            np.arange(intensity_profile.size) - intensity_profile.size / 2
+        )
         maximum_index = np.argmax(intensity_profile)
 
         # estimate peak width
@@ -205,8 +217,12 @@ class Kluwe(DetectionMethodABC):
         leveled_intensity_profile = intensity_profile - background
 
         # Calculate peak widths at the relative height
-        peak_widths, width_heights, left_ips, right_ips = scipy.signal.peak_widths(
-            leveled_intensity_profile, np.array([maximum_index]), rel_height=0.5
+        peak_widths, width_heights, left_ips, right_ips = (
+            scipy.signal.peak_widths(
+                leveled_intensity_profile,
+                np.array([maximum_index]),
+                rel_height=0.5,
+            )
         )
 
         width_at_10percent = peak_widths[0] * sqrt(log(1 / 0.1) / log(2))
@@ -265,7 +281,9 @@ class Kluwe(DetectionMethodABC):
             col = np.mean(arr, axis=0).flatten()
         else:
             col = np.mean(
-                image_utils.rotate_image(image=arr, angle=angle, impl="cv2", order=1),
+                image_utils.rotate_image(
+                    image=arr, angle=angle, impl="cv2", order=1
+                ),
                 axis=0,
             ).flatten()
         return col
@@ -294,7 +312,9 @@ class Kluwe(DetectionMethodABC):
             self.angle_space_dim.steps,
             endpoint=False,
         )
-        return angles, np.array([self.collapse_arr(arr, angle) for angle in angles])
+        return angles, np.array(
+            [self.collapse_arr(arr, angle) for angle in angles]
+        )
 
     def estimate_global_maxima(
         self, arr: nptyping.NDArray, wrap_length=5
@@ -318,8 +338,6 @@ class Kluwe(DetectionMethodABC):
         projection = np.max(angle_space, axis=1)
         wrapped_projection = np.pad(projection, wrap_length, mode="wrap")
 
-        signal_min = np.min(wrapped_projection)
-        signal_max = np.max(wrapped_projection)
         signal_mean = np.mean(wrapped_projection)
         signal_std = np.std(wrapped_projection)
 
@@ -383,7 +401,9 @@ def optimization_loss_function(
     return neg_maximum
 
 
-def optimization_loss_function_scalar(angle: float, im: nptyping.NDArray) -> float:
+def optimization_loss_function_scalar(
+    angle: float, im: nptyping.NDArray
+) -> float:
     """Coast function used for accurate estimation of the alignment of a
     straight beam in an image with the first axis of the image. Suitable for
     scipy.optimize.minimize_scalar.
