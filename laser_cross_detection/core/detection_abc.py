@@ -1,8 +1,8 @@
-import numpy.typing as nptyping
-import skimage as ski
-
 from abc import ABC, abstractmethod
 from typing import Any
+
+import numpy.typing as nptyping
+import skimage as ski
 
 
 class DetectionMethodABC(ABC):

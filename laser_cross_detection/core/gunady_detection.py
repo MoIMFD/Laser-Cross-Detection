@@ -2,10 +2,8 @@ import numpy as np
 import numpy.typing as nptyping
 import scipy.optimize as sopt
 
-from typing import Union, Tuple
-
-from .hess_normal_line import HessNormalLine
 from .detection_abc import DetectionMethodABC
+from .hess_normal_line import HessNormalLine
 
 
 class Gunady(DetectionMethodABC):
@@ -23,10 +21,10 @@ class Gunady(DetectionMethodABC):
         self,
         arr: nptyping.NDArray,
         *args,
-        p01: Tuple[float, float, float, float],
-        p02: Union[Tuple[float, float, float, float], None] = None,
+        p01: tuple[float, float, float, float],
+        p02: tuple[float, float, float, float] | None = None,
         threshold: float = 100,
-        **kwargs
+        **kwargs,
     ) -> nptyping.NDArray:
         """Estimates the intersection point of two gaussian beams in a 2d
         image by fitting gaussian beams using least squares method. The method
@@ -56,7 +54,7 @@ class Gunady(DetectionMethodABC):
         arr[arr < threshold] = 0
 
         def fit_function(
-            xy: Tuple[nptyping.NDArray, nptyping.NDArray],
+            xy: tuple[nptyping.NDArray, nptyping.NDArray],
             theta: float,
             rho: float,
             beam_width: float,
@@ -88,7 +86,7 @@ class Gunady(DetectionMethodABC):
 
         xx, yy = np.meshgrid(x, y)
         # fit the first beam
-        popt, pcov = sopt.curve_fit(
+        popt, _pcov = sopt.curve_fit(
             fit_function,
             (xx, yy),
             arr.ravel(),
@@ -99,9 +97,7 @@ class Gunady(DetectionMethodABC):
         beam1 = HessNormalLine.from_degrees(
             angle=theta1, distance=rho1, center=(width / 2, height / 2)
         )
-        first_beam_image = fit_function((xx, yy), *popt).reshape(
-            (height, width)
-        )
+        first_beam_image = fit_function((xx, yy), *popt).reshape((height, width))
         # create residual image
         residual = arr - first_beam_image
         residual[residual < threshold] = 0

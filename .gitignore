@@ -1,12 +1,16 @@
 # figure folder
-figures/
-plots/
-images/
-tmp/
-notebooks_private/
-pytorch_calibration/
-sourcecode-and-supp-material/
 .vscode/
+.envrc
+
+# example image
+example.png
+
+# intermediate results
+tmp/
+temp/
+temporary/
+*_tmp/
+tmp_*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -161,6 +165,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# ruff cache
+.ruff_cache
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

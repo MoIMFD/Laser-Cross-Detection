@@ -1,14 +1,10 @@
 import numpy as np
 import numpy.typing as nptyping
-
-from scipy.sparse import csr_matrix
 import sklearn as sklearn
+from scipy.sparse import csr_matrix
 
-
-from typing import List, Tuple
-
+from . import ComplexHessLine
 from .detection_abc import DetectionMethodABC
-from . import HessNormalLine, ComplexHessLine
 
 
 class Ransac(DetectionMethodABC):
@@ -46,8 +42,9 @@ class Ransac(DetectionMethodABC):
 
         # convert arr to x y list of white pixel coordinates
         indices = self.__get_indices_sparse(arr)
-        x, y = np.array(indices[1][1], dtype=float), np.array(
-            indices[1][0], dtype=float
+        x, y = (
+            np.array(indices[1][1], dtype=float),
+            np.array(indices[1][0], dtype=float),
         )
         x = x.copy() - image_center[0]
         y = y.copy() - image_center[1]
@@ -60,8 +57,8 @@ class Ransac(DetectionMethodABC):
 
             normal = np.array((-coef_1, 1))
             normal = normal / np.linalg.norm(normal)
-            distance = np.dot([0, intercept_1], normal)
-            angle = np.arctan2(normal[1], normal[0])
+            # distance = np.dot([0, intercept_1], normal)
+            # angle = np.arctan2(normal[1], normal[0])
 
             line1 = ComplexHessLine.from_intercept_and_slope(
                 intercept_1, coef_1, center=image_center
@@ -104,7 +101,12 @@ class Ransac(DetectionMethodABC):
 
     def __ransac(
         self, x: nptyping.NDArray, y: nptyping.NDArray
-    ) -> Tuple[float, Tuple[float, float], np.ndarray[float], np.ndarray[float]]:
+    ) -> tuple[
+        float,
+        tuple[float, float],
+        nptyping.NDArray[np.float64],
+        nptyping.NDArray[np.float64],
+    ]:
         """Performs ransac algorithm on a set of points and returns slope,
         intercept and points with highest residuals.
 
@@ -146,6 +148,6 @@ class Ransac(DetectionMethodABC):
             (cols, (data.ravel(), cols)), shape=(data.max() + 1, data.size)
         )
 
-    def __get_indices_sparse(self, data: nptyping.NDArray) -> List[Tuple[int, int]]:
+    def __get_indices_sparse(self, data: nptyping.NDArray) -> list[tuple[int, int]]:
         M = self.__compute_M(data)
         return [np.unravel_index(row.data, data.shape) for row in M]

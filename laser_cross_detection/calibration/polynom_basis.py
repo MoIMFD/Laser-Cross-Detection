@@ -1,8 +1,7 @@
-import numpy as np
-import numpy.polynomial.polynomial as poly
-from typing import List, Tuple, Optional, Union, Callable
-from dataclasses import dataclass
 from itertools import combinations_with_replacement
+
+import numpy as np
+import numpy.typing as nptyping
 
 
 class PolynomialBasis:
@@ -22,7 +21,7 @@ class PolynomialBasis:
         self.max_order = max(orders)
         self._powers = self._generate_powers()
 
-    def _generate_powers(self) -> List[Tuple[int, ...]]:
+    def _generate_powers(self) -> list[tuple[int, ...]]:
         """
         Generate power tuples for multivariate polynomial terms.
 
@@ -53,11 +52,11 @@ class PolynomialBasis:
         """Return the number of terms in the basis."""
         return len(self._powers)
 
-    def powers(self) -> List[Tuple[int, ...]]:
+    def powers(self) -> list[tuple[int, ...]]:
         """Return the power tuples for all terms."""
         return self._powers
 
-    def evaluate(self, *coords: np.ndarray) -> np.ndarray:
+    def evaluate(self, *coords: nptyping.NDArray) -> nptyping.NDArray:
         """
         Evaluate all basis functions at given coordinates.
 
@@ -85,7 +84,9 @@ class PolynomialBasis:
 
         return design_matrix
 
-    def evaluate_single_term(self, term_idx: int, *coords: np.ndarray) -> np.ndarray:
+    def evaluate_single_term(
+        self, term_idx: int, *coords: nptyping.NDArray
+    ) -> nptyping.NDArray:
         """
         Evaluate a single basis function at given coordinates.
 
@@ -110,7 +111,7 @@ class PolynomialBasis:
 
         return result
 
-    def get_symbolic_terms(self, var_names: List[str] = None) -> List[str]:
+    def get_symbolic_terms(self, var_names: list[str] = None) -> list[str]:
         """
         Get symbolic representation of each basis function.
 
@@ -121,7 +122,7 @@ class PolynomialBasis:
             List of strings representing each term
         """
         if var_names is None:
-            var_names = [f"x{i+1}" for i in range(self.n_dims)]
+            var_names = [f"x{i + 1}" for i in range(self.n_dims)]
 
         if len(var_names) != self.n_dims:
             raise ValueError(

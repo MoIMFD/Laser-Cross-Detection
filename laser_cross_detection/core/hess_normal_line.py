@@ -1,10 +1,9 @@
-import numpy as np
-import numpy.typing as nptyping
-import matplotlib.pyplot as plt
-
+from dataclasses import dataclass
 from typing import List
 
-from dataclasses import dataclass
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.typing as nptyping
 
 PI = np.pi
 TWO_PI = np.pi * 2
@@ -36,7 +35,7 @@ def distance_line_point(
         p (nptyping.NDArray): point to calculate distance from line
 
     Returns:
-        float: distance betweeen line (p1, p2) and point p
+        float: distance between line (p1, p2) and point p
     """
     p1, p2, p = np.array([p1, p2, p])  # make sure all inputs are numpy arrays
     return np.linalg.norm(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
@@ -118,7 +117,7 @@ class HessNormalLine:
         return cls.from_direction(p1, d, center)
 
     @property
-    def normal_point(self) -> np.ndarray:
+    def normal_point(self) -> nptyping.NDArray:
         return self.center + self.distance * self.normal_vector
 
     @property
@@ -126,17 +125,17 @@ class HessNormalLine:
         return np.tan(self.angle + PI_HALF)
 
     @property
-    def normal_vector(self) -> np.ndarray:
+    def normal_vector(self) -> nptyping.NDArray:
         return np.array([np.cos(self.angle), np.sin(self.angle)])
 
     @property
-    def direction_vector(self) -> np.ndarray:
+    def direction_vector(self) -> nptyping.NDArray:
         return np.array([np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)])
 
     def plot_slope(self, axis, *args, **kwds):
         return axis.axline(self.normal_point, slope=self.slope, *args, **kwds)
 
-    def interscet_nplinalg(self, other) -> np.ndarray:
+    def interscet_nplinalg(self, other) -> nptyping.NDArray:
         """Calculate the intersection of two instances solving the linear
         equations defining the lines. Currently both lines need
         to share the same origin.
@@ -145,26 +144,26 @@ class HessNormalLine:
             other (HessNormalLine): other instance
 
         Returns:
-            np.ndarray: point of intersection
+            nptyping.NDArray: point of intersection
         """
         assert all(np.isclose(self.center, other.center))
         A = np.vstack([self.normal_vector, other.normal_vector])
         r = np.array([self.distance, other.distance])
         return np.linalg.solve(A, r) + self.center
 
-    def intersect_crossprod(self, other) -> np.ndarray:
+    def intersect_crossprod(self, other) -> nptyping.NDArray:
         """Calculate the intersection of two instances using the method of
         cross products in homogenous coordinates. Currently both lines need
         to share the same origin.
 
         Adapted from: https://stackoverflow.com/a/42727584
-        Theorie described: https://imois.in/posts/line-intersections-with-cross-products/
+        Theory described: https://imois.in/posts/line-intersections-with-cross-products/
 
         Args:
             other (HessNormalLine): other instance
 
         Returns:
-            np.ndarray: point of intersection
+            nptyping.NDArray: point of intersection
         """
         assert all(np.isclose(self.center, other.center))
         a1 = self.normal_point
@@ -173,42 +172,6 @@ class HessNormalLine:
         b1 = other.normal_point
         b2 = other.normal_point + other.direction_vector
         return np.array(get_intersect(a1, a2, b1, b2))
-
-
-def distance_line_point(p1, p2, p):
-    """Calculates the shortest distance between a line defined by p1 and p2
-    and a point p
-
-    Args:
-        p1: first point on line
-        p2: second point on line
-        p: point to calculate distance from line
-
-    Returns:
-        float: distance between line (p1, p2) and point p
-    """
-    p1, p2, p = np.array([p1, p2, p])  # make sure all inputs are numpy arrays
-    return np.linalg.norm(np.cross(p2 - p1, p1 - p)) / np.linalg.norm(p2 - p1)
-
-
-def get_intersect(a1, a2, b1, b2):
-    """
-    Returns the point of intersection of the lines passing through a2,a1 and b2,b1
-    using cross product in homogenous coordinate space.
-
-    a1: [x, y] a point on the first line
-    a2: [x, y] another point on the first line
-    b1: [x, y] a point on the second line
-    b2: [x, y] another point on the second line
-    """
-    s = np.vstack([a1, a2, b1, b2])  # s for stacked
-    h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
-    l1 = np.cross(h[0], h[1])  # get first line
-    l2 = np.cross(h[2], h[3])  # get second line
-    x, y, z = np.cross(l1, l2)  # point of intersection
-    if z == 0:  # lines are parallel
-        return (float("inf"), float("inf"))
-    return (x / z, y / z)
 
 
 @dataclass
@@ -257,17 +220,17 @@ class ComplexHessLine:
         return angle if angle >= 0 else angle + TWO_PI
 
     @property
-    def normal_vector(self) -> np.ndarray:
+    def normal_vector(self) -> nptyping.NDArray:
         """Get the unit normal vector pointing from center to line"""
         return np.array([np.cos(self.angle), np.sin(self.angle)])
 
     @property
-    def direction_vector(self) -> np.ndarray:
+    def direction_vector(self) -> nptyping.NDArray:
         """Get the direction vector along the line (perpendicular to normal)"""
         return np.array([-np.sin(self.angle), np.cos(self.angle)])
 
     @property
-    def normal_point(self) -> np.ndarray:
+    def normal_point(self) -> nptyping.NDArray:
         """Get the point on the line closest to center"""
         return self.center + self.distance * self.normal_vector
 

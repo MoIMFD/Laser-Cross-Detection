@@ -1,13 +1,10 @@
+import time
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Union, Callable
 
 import numpy as np
 import numpy.typing as nptyping
-import scipy.optimize as sopt
-from functools import cached_property
-import time
 
-from . import SoloffPolynom
+from .soloff_polynom import SoloffPolynom
 
 
 @dataclass
@@ -23,15 +20,15 @@ class SoloffCamCalibration:
     camera_id: str = "cam0"  # Added camera identifier for multi-camera systems
 
     # Added metadata for calibration quality assessment
-    _calibration_stats: Dict = field(default_factory=dict)
+    _calibration_stats: dict = field(default_factory=dict)
 
     @classmethod
     def from_calibration_points(
         cls,
-        xyz: np.ndarray,
-        u: np.ndarray,
-        v: np.ndarray,
-        soloff_type: Tuple[int, int, int],
+        xyz: nptyping.NDArray,
+        u: nptyping.NDArray,
+        v: nptyping.NDArray,
+        soloff_type: tuple[int, int, int],
         camera_id: str = "cam0",
         regularization: float = 0.0,
     ):
@@ -97,7 +94,9 @@ class SoloffCamCalibration:
 
         return calibration
 
-    def __call__(self, xyz: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(
+        self, xyz: nptyping.NDArray
+    ) -> tuple[nptyping.NDArray, nptyping.NDArray]:
         """Projects 3D world coordinates to 2D image coordinates (vectorized operation).
 
         Args:
@@ -107,7 +106,7 @@ class SoloffCamCalibration:
             Tuple of u and v image coordinates
         """
         # Handle different input shapes efficiently
-        orig_shape = xyz.shape
+        # _orig_shape = xyz.shape
 
         if xyz.ndim == 1 and len(xyz) == 3:
             # Single point as flat array
@@ -124,8 +123,8 @@ class SoloffCamCalibration:
         return u, v
 
     def reprojection_error(
-        self, xyz: np.ndarray, u: np.ndarray, v: np.ndarray
-    ) -> np.ndarray:
+        self, xyz: nptyping.NDArray, u: nptyping.NDArray, v: nptyping.NDArray
+    ) -> nptyping.NDArray:
         """Calculate reprojection error for given 3D points and their measured 2D coordinates.
 
         Args:
@@ -140,7 +139,7 @@ class SoloffCamCalibration:
         return np.sqrt((u - u_pred) ** 2 + (v - v_pred) ** 2)
 
     @property
-    def calibration_stats(self) -> Dict:
+    def calibration_stats(self) -> dict:
         """Get the calibration statistics and quality metrics."""
         return self._calibration_stats
 

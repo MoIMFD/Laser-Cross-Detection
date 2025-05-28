@@ -1,15 +1,12 @@
-import numpy as np
-import pandas as pd
-import lmfit
-import skimage as ski
-from sklearn.decomposition import PCA
-from scipy.optimize import minimize_scalar
-
-
-from math import atan2, cos, sin, pi as PI
-from functools import cached_property
 from collections import deque
-from itertools import combinations, product
+from functools import cached_property
+from itertools import product
+from math import cos, sin
+
+import lmfit
+import numpy as np
+import skimage as ski
+from scipy.optimize import minimize_scalar
 
 
 def rotate_2d_vector(vector, angle):
@@ -42,9 +39,7 @@ def fit_ellipse_direct(points):
     from scipy import linalg
 
     try:
-        eigenvalues, eigenvectors = linalg.eig(
-            np.dot(np.linalg.inv(np.dot(D.T, D)), C)
-        )
+        eigenvalues, eigenvectors = linalg.eig(np.dot(np.linalg.inv(np.dot(D.T, D)), C))
         # Find the only positive eigenvalue
         idx = np.where(eigenvalues > 0)[0]
         if len(idx) == 0:  # No positive eigenvalue found
@@ -73,9 +68,7 @@ def fit_2d_gaussian(point):
     params = model.guess(intensity.ravel(), xx.ravel(), yy.ravel())
     params["centerx"].value = point.centroid[1]
     params["centery"].value = point.centroid[0]
-    result = model.fit(
-        intensity.ravel(), x=xx.ravel(), y=yy.ravel(), params=params
-    )
+    result = model.fit(intensity.ravel(), x=xx.ravel(), y=yy.ravel(), params=params)
     return result.best_values["centery"], result.best_values["centerx"]
 
 
@@ -99,12 +92,8 @@ class DistanceOutlierDetector:
         if len(self.values) < 3:
             return False
 
-        mean_dist = np.mean(
-            list(self.values)[:-1]
-        )  # Mean of previous distances
-        std_dist = np.std(
-            list(self.values)[:-1]
-        )  # Std dev of previous distances
+        mean_dist = np.mean(list(self.values)[:-1])  # Mean of previous distances
+        std_dist = np.std(list(self.values)[:-1])  # Std dev of previous distances
 
         # If std is very small, use a minimum value to avoid division by zero issues
         std_dist = max(std_dist, 0.001 * mean_dist)
@@ -156,9 +145,9 @@ class HardwareCalibrationTarget:
 
     @property
     def aligned_points(self):
-        assert (
-            self.calibration_params["basis"] is not None
-        ), "Perform axis alignement first"
+        assert self.calibration_params["basis"] is not None, (
+            "Perform axis alignment first"
+        )
         return np.dot(
             self.marker_positions_gaussian - self.triangle.centroid,
             self.calibration_params["basis"],
@@ -220,9 +209,7 @@ class HardwareCalibrationTarget:
 
             return np.max(np.abs(x_proj)) + np.max(np.abs(y_proj))
 
-        result = minimize_scalar(
-            cost_function, 0.0, bounds=((-np.pi / 8, np.pi / 8))
-        )
+        result = minimize_scalar(cost_function, 0.0, bounds=((-np.pi / 8, np.pi / 8)))
 
         assert result.success, f"optimization did not converged: {result!s}"
         self.calibration_params["x_axis"] = rotate_2d_vector(
@@ -279,9 +266,9 @@ class HardwareCalibrationTarget:
 
     def build_grids(self):
         idx = list(range(11))
-        grid1 = {i: None for i in list(product(idx, idx))}
+        grid1 = dict.fromkeys(list(product(idx, idx)))
         idx = list(range(10))
-        grid2 = {i: None for i in list(product(idx, idx))}
+        grid2 = dict.fromkeys(list(product(idx, idx)))
 
         lines1, lines2 = self.assign_points_to_lines()
 
@@ -342,9 +329,7 @@ def process_square(square, pad_width=20):
         threshold_rel=0.22,
     )
     assert coords.shape[0] == 4, f"{coords.shape}"
-    coords_subpix = ski.feature.corner_subpix(
-        padded_image, coords, window_size=15
-    )
+    coords_subpix = ski.feature.corner_subpix(padded_image, coords, window_size=15)
     indices = np.lexsort((coords_subpix[:, 0], coords_subpix[:, 1]))
     return (
         coords_subpix[indices, 1] - pad_width,
@@ -362,9 +347,7 @@ def process_triangle(triangle, pad_width=15):
         threshold_rel=0.22,
     )
     assert coords.shape[0] == 3, f"{coords.shape}"
-    coords_subpix = ski.feature.corner_subpix(
-        padded_image, coords, window_size=25
-    )
+    coords_subpix = ski.feature.corner_subpix(padded_image, coords, window_size=25)
     indices = np.lexsort((coords_subpix[:, 1], coords_subpix[:, 0]))
     return (
         coords_subpix[indices, 1] - pad_width,

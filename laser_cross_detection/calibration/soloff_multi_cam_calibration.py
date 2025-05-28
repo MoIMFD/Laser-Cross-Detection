@@ -1,11 +1,10 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Union, Callable
 
 import numpy as np
 import numpy.typing as nptyping
 import scipy.optimize as sopt
 
-from . import SoloffCamCalibration
+from .soloff_cam_calibration import SoloffCamCalibration
 
 
 @dataclass
@@ -16,10 +15,10 @@ class SoloffMultiCamCalibration:
     optimization of 3D reconstruction from multiple camera views.
     """
 
-    single_cam_calibrations: List[SoloffCamCalibration] = field(default_factory=list)
+    single_cam_calibrations: list[SoloffCamCalibration] = field(default_factory=list)
 
     # Optimization configuration with sensible defaults
-    optimization_config: Dict = field(
+    optimization_config: dict = field(
         default_factory=lambda: {
             "method": "Powell",
             "options": {"maxiter": 1000, "ftol": 1e-6, "xtol": 1e-6},
@@ -39,7 +38,9 @@ class SoloffMultiCamCalibration:
         self.single_cam_calibrations.append(calibration)
         return self
 
-    def __call__(self, xyz: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
+    def __call__(
+        self, xyz: nptyping.NDArray
+    ) -> list[tuple[nptyping.NDArray, nptyping.NDArray]]:
         """Project 3D points to all cameras (vectorized operation).
 
         Args:
@@ -52,20 +53,21 @@ class SoloffMultiCamCalibration:
 
     def calculate_point(
         self,
-        us: List[Union[float, np.ndarray]],
-        vs: List[Union[float, np.ndarray]],
-        x0: Optional[np.ndarray] = None,
-        weights: Optional[np.ndarray] = None,
-        method: Optional[str] = None,
+        us: list[float | nptyping.NDArray],
+        vs: list[float | nptyping.NDArray],
+        x0: nptyping.NDArray | None = None,
+        weights: nptyping.NDArray | None = None,
+        method: str | None = None,
         full_output: bool = False,
-    ) -> Union[np.ndarray, Tuple[np.ndarray, Dict]]:
+    ) -> nptyping.NDArray | tuple[nptyping.NDArray, dict]:
         """Calculate 3D position from multiple camera views with improved optimization.
 
         Args:
             us: List of u coordinates for each camera
             vs: List of v coordinates for each camera
             x0: Initial guess (defaults to [0,0,0] if None)
-            weights: Optional weights for each camera (for handling reliability differences)
+            weights: Optional weights for each camera (for handling reliability
+                differences)
             method: Override optimization method (uses config default if None)
             full_output: Whether to return optimization details
 
@@ -128,10 +130,10 @@ class SoloffMultiCamCalibration:
 
     def triangulate_points(
         self,
-        point_correspondences: List[Tuple[List[float], List[float]]],
-        initial_guess: Optional[np.ndarray] = None,
-        weights: Optional[List[np.ndarray]] = None,
-    ) -> np.ndarray:
+        point_correspondences: list[tuple[list[float], list[float]]],
+        initial_guess: nptyping.NDArray | None = None,
+        weights: list[nptyping.NDArray] | None = None,
+    ) -> nptyping.NDArray:
         """Triangulate multiple points from corresponding image coordinates.
 
         Args:
@@ -161,11 +163,11 @@ class SoloffMultiCamCalibration:
 
     def estimate_uncertainty(
         self,
-        point_3d: np.ndarray,
-        us: List[float],
-        vs: List[float],
+        point_3d: nptyping.NDArray,
+        us: list[float],
+        vs: list[float],
         confidence: float = 0.95,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[nptyping.NDArray, nptyping.NDArray]:
         """Estimate uncertainty of the reconstructed 3D point.
 
         Uses local Jacobian approximation to estimate uncertainty ellipsoid.
@@ -258,7 +260,7 @@ class SoloffMultiCamCalibration:
 
         # System overview
         report = [
-            f"=== Soloff Multi-Camera System Report ===",
+            "=== Soloff Multi-Camera System Report ===",
             f"Number of cameras: {num_cameras}",
             f"Optimization method: {self.optimization_config['method']}",
             "",
@@ -266,7 +268,7 @@ class SoloffMultiCamCalibration:
 
         # Add individual camera reports
         for i, cam in enumerate(self.single_cam_calibrations):
-            report.append(f"--- Camera {i+1}: {cam.camera_id} ---")
+            report.append(f"--- Camera {i + 1}: {cam.camera_id} ---")
             report.append(cam.get_report())
             report.append("")
 

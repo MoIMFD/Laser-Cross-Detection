@@ -1,10 +1,9 @@
 import pickle
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
 from pathlib import Path
-from typing import Dict, Tuple
+
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def calculate_distance(p1, p2):
@@ -12,7 +11,7 @@ def calculate_distance(p1, p2):
     return np.linalg.norm(np.subtract(p1, p2))
 
 
-def save_result_dict(result: Dict, result_path: Path) -> None:
+def save_result_dict(result: dict, result_path: Path) -> None:
     if not result_path.parent.exists():
         result_path.parent.mkdir()
 
@@ -20,7 +19,7 @@ def save_result_dict(result: Dict, result_path: Path) -> None:
         pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def load_result_dict(result_path: Path) -> Dict:
+def load_result_dict(result_path: Path) -> dict:
     if not result_path.exists():
         raise FileExistsError(f"No results stored at {result_path!s}")
     else:

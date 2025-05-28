@@ -1,13 +1,12 @@
-import numpy as np
-import numpy.typing as nptyping
-import cv2
-from perlin_numpy import perlin2d
-
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Tuple
 
-from ..utils.image_utils import ImageDimension
+import cv2
+import numpy as np
+import numpy.typing as nptyping
+from perlin_numpy import perlin2d
+
+from laser_cross_detection.utils.image_utils import ImageDimension
 
 
 def solve_for_intersection(
@@ -15,8 +14,8 @@ def solve_for_intersection(
     theta1: float,
     rho2: float,
     theta2: float,
-    offset: Tuple[float, float] = (0, 0),
-) -> Tuple[float, float]:
+    offset: tuple[float, float] = (0, 0),
+) -> nptyping.NDArray:
     """Solves the linear system of equations
 
         cos(theta1) x + sin(theta1) y = rho1
@@ -36,16 +35,14 @@ def solve_for_intersection(
             Defaults to (0, 0).
 
     Returns:
-        Tuple[float, float]: x and y coordinate of the point of intersection
+        nptyping.NDArray[float, float]: x and y coordinate of the point of intersection
     """
 
     # checks if lines are parallel and returns (np.nan, np.nan) in this case
     if np.isclose(theta1, theta2):
-        return np.nan, np.nan
+        return np.array([np.nan, np.nan])
     theta1, theta2 = np.deg2rad([theta1, theta2])
-    A = np.array(
-        [[np.cos(theta1), np.sin(theta1)], [np.cos(theta2), np.sin(theta2)]]
-    )
+    A = np.array([[np.cos(theta1), np.sin(theta1)], [np.cos(theta2), np.sin(theta2)]])
     b = np.array([rho1, rho2])
     return np.linalg.solve(A, b) + offset
 
@@ -111,11 +108,7 @@ def make_beam_image(
     theta = np.deg2rad(theta)
     image = np.exp(
         -(
-            (
-                (x - width / 2) * np.cos(theta)
-                + (y - height / 2) * np.sin(theta)
-                - rho
-            )
+            ((x - width / 2) * np.cos(theta) + (y - height / 2) * np.sin(theta) - rho)
             ** 2
         )
         / ((beam_width / 3) ** 2)
@@ -137,7 +130,7 @@ class BeamImageGenerator:
         self.dimension = ImageDimension(*self.dimension)
 
     @property
-    def center(self) -> Tuple[float, float]:
+    def center(self) -> tuple[float, float]:
         """Returns the center of the image
 
         Returns:
@@ -255,8 +248,8 @@ def add_perlin_noise(
 @lru_cache
 def perlin_noise(
     seed: int = 0,
-    shape: Tuple[int, int] = (2048, 2048),
-    res: Tuple[int, int] = (64, 64),
+    shape: tuple[int, int] = (2048, 2048),
+    res: tuple[int, int] = (64, 64),
     octaves: int = 5,
 ) -> nptyping.NDArray[np.float64]:
     """Creates an image containing Perlin noise.
@@ -287,7 +280,7 @@ def make_noisy_image(
     angle2: float = 90,
     rho2: float = 0,
     beam_width2: float = 1,
-    beam_nosie: float = 0.05,
+    beam_noise: float = 0.05,
     seed: int = 0,
     add_threshold: float = 0.6,
     mask_threshold: float = 0.35,
@@ -308,7 +301,7 @@ def make_noisy_image(
             beam in pixel. Defaults to 0.
         beam_width2 (float, optional): width of the second beam in pixel.
             Defaults to 1.
-        beam_nosie (float, optional): noise altering the gaussian shape of the
+        beam_noise (float, optional): noise altering the gaussian shape of the
             beam profiles. Defaults to 0.05.
         seed (int, optional): seed for random number generator. Defaults to 0.
         add_threshold (float, optional): threshold used for adding Perlin
@@ -319,7 +312,7 @@ def make_noisy_image(
     Returns:
         nptyping.NDArray[np.uint8]: Noisy image with to gaussian beams
     """
-    b = BeamImageGenerator((height, width))
+    b = BeamImageGenerator(ImageDimension(height, width))
     image = b.make_crossing_beams(
         angle1=angle1,
         rho1=rho1,
@@ -327,7 +320,7 @@ def make_noisy_image(
         beam_width1=beam_width1,
         rho2=rho2,
         beam_width2=beam_width2,
-        gaussian_noise_level=beam_nosie,
+        gaussian_noise_level=beam_noise,
     )
     noise = perlin_noise(seed=seed, res=(256, 256), octaves=3)
     image = add_perlin_noise(image, noise, threshold=add_threshold)
@@ -372,7 +365,7 @@ def make_noisefree_image(
     Returns:
         nptyping.NDArray[np.uint8]: noise free image of two gaussian beams
     """
-    b = BeamImageGenerator((height, width))
+    b = BeamImageGenerator(ImageDimension(height, width))
     image = b.make_crossing_beams(
         angle1=angle1,
         rho1=rho1,

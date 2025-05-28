@@ -1,8 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Callable, Optional
-from itertools import combinations_with_replacement
-from collections import Counter
-import functools
+from typing import Optional
 
 import numpy as np
 import numpy.typing as nptyping
@@ -23,7 +20,7 @@ class SoloffPolynom:
     x_order: int
     y_order: int
     z_order: int
-    a: Optional[np.ndarray] = None
+    a: Optional[nptyping.NDArray] = None
 
     def __post_init__(self):
         # Initialize the polynomial basis
@@ -42,7 +39,7 @@ class SoloffPolynom:
                     f"Expected {len(self.basis)} coefficients, got {len(self.a)}"
                 )
 
-    def __call__(self, *args) -> np.ndarray:
+    def __call__(self, *args) -> nptyping.NDArray:
         """
         Evaluate the polynomial at given points.
 
@@ -52,7 +49,7 @@ class SoloffPolynom:
             - A single array of shape [n_points, 3]
 
         Returns:
-            np.ndarray: Polynomial values
+            nptyping.NDArray: Polynomial values
         """
         # Process input coordinates
         if len(args) == 3:
@@ -82,7 +79,7 @@ class SoloffPolynom:
         # Compute polynomial value
         return design_matrix @ self.a
 
-    def fit_direct(self, xyz: np.ndarray, u: np.ndarray) -> "SoloffPolynom":
+    def fit_direct(self, xyz: nptyping.NDArray, u: nptyping.NDArray) -> "SoloffPolynom":
         """
         Fit polynomial coefficients using direct linear solving.
 
@@ -108,7 +105,7 @@ class SoloffPolynom:
         return self
 
     def fit_regularized(
-        self, xyz: np.ndarray, u: np.ndarray, alpha: float = 0.1
+        self, xyz: nptyping.NDArray, u: nptyping.NDArray, alpha: float = 0.1
     ) -> "SoloffPolynom":
         """
         Fit polynomial coefficients using direct linear solving.
@@ -154,7 +151,9 @@ class SoloffPolynom:
 
         return self
 
-    def fit_curve_fit(self, xyz: np.ndarray, u: np.ndarray) -> "SoloffPolynom":
+    def fit_curve_fit(
+        self, xyz: nptyping.NDArray, u: nptyping.NDArray
+    ) -> "SoloffPolynom":
         """
         Fit polynomial coefficients using scipy's curve_fit.
 
@@ -202,7 +201,7 @@ class SoloffPolynom:
 
         return " ".join(result)
 
-    def derive(self, dimension: int) -> "SoloffPolynomNumpy":
+    def derive(self, dimension: int) -> "SoloffPolynom":
         """
         Compute the derivative of the polynomial with respect to a dimension.
 

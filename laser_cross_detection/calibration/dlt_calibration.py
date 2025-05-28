@@ -32,9 +32,9 @@ class DLT:  # Direct Linear Transformation
         uv = np.asarray(uv)
 
         # if the matrices are different length, make them same length (in dir -> 0)
-        l = np.min([xyz.shape[0], uv.shape[0]])  # shortest length only
-        xyz = xyz[:l, :]
-        uv = uv[:l, :]
+        min_len = np.min([xyz.shape[0], uv.shape[0]])  # shortest length only
+        xyz = xyz[:min_len, :]
+        uv = uv[:min_len, :]
 
         n = xyz.shape[0]
 
@@ -102,7 +102,8 @@ class DLT:  # Direct Linear Transformation
 
         return H, err, err_list
 
-    def compute_multipleCams(c3d, c2d):
+    @staticmethod
+    def compute_multiple_cams(c3d, c2d):
         """Camera calibration for multiple cameras by DLT using known object points and their image points.
 
         Parameters
@@ -120,12 +121,12 @@ class DLT:  # Direct Linear Transformation
             list of errors of the DLT (mean residual of the DLT transformation in units of camera coordinates)
             according to cam num in c2d.
         """
-        Hs, errs, errs_lists = list(), list(), list()
+        Hs, errs, errs_lists = [], [], []
         numCams = int(c2d.shape[1] / 2)
-        l = np.min([c3d.shape[0], c2d.shape[0]])  # shortest length only
+        min_len = np.min([c3d.shape[0], c2d.shape[0]])  # shortest length only
         for i in range(numCams):
             _Hs, _errs, _errs_list = DLT.compute(
-                c3d[:l, :], c2d[:l, i * 2 : i * 2 + 2]
+                c3d[:min_len, :], c2d[:min_len, i * 2 : i * 2 + 2]
             )
             Hs.append(_Hs)
             errs.append(_errs)

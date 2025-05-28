@@ -41,3 +41,46 @@ The noise in the images is created by masking the beams by Perlin noise, adding 
 
 ## Calibration
 To make use of the detections a calibration module `laser_cross_detection.calibration` exists. It supports linear calibration (Direct Linear Transform - DLT, adapted from [github.com/JD-Canada/Tracker3D](https://github.com/JD-Canada/Tracker3D)) and polynomial calibration using Soloff Polynomials ([Soloff et al. (1997)](https://doi.org/10.1088/0957-0233/8/12/008)). Both approaches support multi camera setups.
+
+
+## Installation
+### Requirements
+- Python >=3.10
+- [`uv`](https://docs.astral.sh/uv/) package manager
+
+### Direct Git Install
+To install from source run
+```bash
+uv pip install git+https://gitlab.com/MoIMFD/Laser-Cross-Detection.git
+```
+using the [`uv`](https://docs.astral.sh/uv/) package manager.
+
+### Development Environment
+To set up a development environment with `uv` just run
+```bash
+# clone repository
+git clone https://gitlab.com/MoIMFD/Laser-Cross-Detection.git
+cd Laser-Cross-Detection
+
+# create a virtual environment
+uv venv
+source .venv/bin/activate
+
+# synchronize the dependencies and install the project
+uv sync
+
+# verify the installation
+python -c "import laser_cross_detection; print('Success')"
+```
+Alternative: Install from wheel
+```bash
+# clone repository
+git clone https://gitlab.com/MoIMFD/Laser-Cross-Detection.git
+cd Laser-Cross-Detection
+
+# build the wheel
+uv build
+
+# install the project
+uv pip install dist/laser_cross_detection-*.whl
+```

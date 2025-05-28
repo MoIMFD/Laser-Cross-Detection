@@ -1,9 +1,8 @@
+import lmfit
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as nptyping
 import skimage as ski
-import lmfit
-from typing import Union, Tuple
-import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 
 from .detection_abc import DetectionMethodABC
@@ -11,7 +10,7 @@ from .detection_abc import DetectionMethodABC
 
 class TemplateMatching(DetectionMethodABC):
     def __init__(
-        self, template: nptyping.NDArray, intersec_offset: Tuple[float, float]
+        self, template: nptyping.NDArray, intersec_offset: tuple[float, float]
     ) -> None:
         """Detecting the intersection of two light beams in an image based
         on template matching.
@@ -29,7 +28,7 @@ class TemplateMatching(DetectionMethodABC):
         self,
         image: nptyping.NDArray,
         *args,
-        fit_window: Union[int, None] = None,
+        fit_window: int | None = None,
         **kwargs,
     ) -> nptyping.NDArray[np.float64]:
         """Uses the specified template to identify the intersection of two
@@ -41,7 +40,7 @@ class TemplateMatching(DetectionMethodABC):
 
         Args:
             image (nptyping.NDArray): _description_
-            fit_window (Union[int, None], optional): Number of pixels used for
+            fit_window ( int | None, optional): Number of pixels used for
                 the 2d window to fit a two dimensional gaussian to the maximum
                 of the correlation map. Defaults to None which uses
                 max(width, height) / 10 as the fit_window.
@@ -51,30 +50,22 @@ class TemplateMatching(DetectionMethodABC):
                 intersection
         """
         image = image.copy()
-        result = ski.feature.match_template(
-            image=image, template=self.template
-        )
+        result = ski.feature.match_template(image=image, template=self.template)
 
         max_index = np.unravel_index(np.argmax(result), shape=result.shape)
 
         if fit_window is None:
             fit_window = max(image.shape) // 25
 
-        x_slice = slice(
-            max_index[0] - fit_window, max_index[0] + fit_window + 1
-        )
+        x_slice = slice(max_index[0] - fit_window, max_index[0] + fit_window + 1)
         x = np.mgrid[x_slice]
-        y_slice = slice(
-            max_index[1] - fit_window, max_index[1] + fit_window + 1
-        )
+        y_slice = slice(max_index[1] - fit_window, max_index[1] + fit_window + 1)
         y = np.mgrid[y_slice]
         result_section = result[x_slice, y_slice]
 
         xx, yy = np.meshgrid(x, y)
         model = lmfit.models.Gaussian2dModel()
-        params = model.guess(
-            data=result_section.ravel(), y=xx.ravel(), x=yy.ravel()
-        )
+        params = model.guess(data=result_section.ravel(), y=xx.ravel(), x=yy.ravel())
         fit_result = model.fit(
             data=result_section.ravel(),
             x=xx.ravel(),
@@ -98,7 +89,7 @@ class TemplateMatching(DetectionMethodABC):
         return np.divide(self.template.shape, 2)
 
     def update_template(
-        self, template: nptyping.NDArray, intersec_offset: Tuple[float, float]
+        self, template: nptyping.NDArray, intersec_offset: tuple[float, float]
     ):
         """Set a new template and offset
 
@@ -117,7 +108,7 @@ class TemplateMatching(DetectionMethodABC):
     @staticmethod
     def select_template(
         ref_image: nptyping.NDArray,
-    ) -> Tuple[nptyping.NDArray, float, float]:
+    ) -> tuple[nptyping.NDArray, float, float]:
         """Static method to interactively select a template and the offset
         using matplotlib widgets.
 
@@ -132,7 +123,7 @@ class TemplateMatching(DetectionMethodABC):
         ax.imshow(ref_image, cmap="gray")
 
         so = SelectorObject()
-        selector = RectangleSelector(
+        _selector = RectangleSelector(
             ax=ax, onselect=so.__call__, ignore_event_outside=True
         )
         plt.show(block=True)
@@ -143,7 +134,7 @@ class TemplateMatching(DetectionMethodABC):
         co = CenterObject()
         ax.imshow(template, cmap="gray")
 
-        cid = fig.canvas.mpl_connect("button_press_event", co.__call__)
+        _cid = fig.canvas.mpl_connect("button_press_event", co.__call__)
 
         plt.show(block=True)
 

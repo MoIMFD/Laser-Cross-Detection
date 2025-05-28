@@ -1,8 +1,10 @@
-import laser_cross_detection as lcd
-import matplotlib.pyplot as plt
-import numpy as np
 from collections import namedtuple
 from time import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import laser_cross_detection as lcd
 
 beam_parameter = namedtuple("BeamParameter", "width rho theta")
 
@@ -36,25 +38,19 @@ if __name__ == "__main__":
     template_center, template_offset = np.divmod(intersection, 1)
     window = 50
     template = image[
-        int(template_center[1])
-        - window : int(template_center[1])
-        + window
-        + 1,
-        int(template_center[0])
-        - window : int(template_center[0])
-        + window
-        + 1,
+        int(template_center[1]) - window : int(template_center[1]) + window + 1,
+        int(template_center[0]) - window : int(template_center[0]) + window + 1,
     ]
 
-    methods = dict(
-        kluwe=lcd.core.Kluwe(),
-        ransac=lcd.core.Ransac(),
-        hough=lcd.core.Hough(),
-        gunady=lcd.core.Gunady(),
-        template_matching=lcd.core.TemplateMatching(
+    methods = {
+        "kluwe": lcd.core.Kluwe(),
+        "ransac": lcd.core.Ransac(),
+        "hough": lcd.core.Hough(),
+        "gunady": lcd.core.Gunady(),
+        "template_matching": lcd.core.TemplateMatching(
             template=template, intersec_offset=template_offset
         ),
-    )
+    }
 
     print("Testing Methods...\n")
 
@@ -84,11 +80,11 @@ if __name__ == "__main__":
         )
         print(
             f"\t{name:<18} - "
-            + f"({detected_intersection[0]:.4f}, {detected_intersection[1]:.4f}) - "
-            + f"error: {np.linalg.norm(np.subtract(detected_intersection, intersection)):.4f} pixel - "
-            + f"took {toc - tic:.4f} ms"
+            f"({detected_intersection[0]:.4f}, {detected_intersection[1]:.4f}) - "
+            f"error: {np.linalg.norm(np.subtract(detected_intersection, intersection)):.4f} pixel - "
+            f"took {toc - tic:.4f} ms"
         )
 
     ax.legend()
-    plt.show()
+    plt.savefig("example.png", dpi=300)
     print("\nDone")

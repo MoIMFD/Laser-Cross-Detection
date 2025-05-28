@@ -3,8 +3,8 @@ import numpy.typing as nptyping
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import KMeans
 
-from .hess_normal_line import HessNormalLine, ComplexHessLine
 from .detection_abc import DetectionMethodABC
+from .hess_normal_line import ComplexHessLine
 
 PI = np.pi
 
@@ -15,7 +15,7 @@ def average_angles(angles: nptyping.NDArray) -> float:
     are converted to complex numbers, averaged and transformed back.
 
     Args:
-        angles (nptyping.NDArray): list of angles in randians
+        angles (nptyping.NDArray): list of angles in radians
 
     Returns:
         float: average angle in radians
