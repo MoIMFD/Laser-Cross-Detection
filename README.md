@@ -1,8 +1,12 @@
 # Laser Cross Detection
 
 ## Overview and Core Utilities
-This repository contains code to accurately detect the intersection point of two light beams in 2d images. The module can be used in combination with volumetric camera calibration based on the laser cross target method developed by [Hardege et al.](https://doi.org/10.1007/s00348-023-03729-1). An example of the problem is shown below:
+This repository contains code to accurately detect the intersection point of two light beams in 2d images. The module can be used in combination with volumetric camera calibration based on the laser cross target method developed by [Hardege et al.](https://doi.org/10.1007/s00348-023-03729-1). The setup and an example of the problem are shown below:
 
+**Setup**
+![](readme-figures/laser-cross-overview.png)
+
+**Synthetic Laser Cross Image**
 ![](readme-figures/example_image.png)
 
 The package provides a core module `laser_cross_detection.core` with five different methods to detect the point of intersection:
