@@ -11,7 +11,7 @@ from matplotlib.widgets import RectangleSelector
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-from .detection_abc import DetectionMethodABC
+from laser_cross_detection.core.detection_abc import DetectionMethodABC
 
 
 class TemplateMatching(DetectionMethodABC):

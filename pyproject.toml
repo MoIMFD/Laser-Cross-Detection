@@ -53,11 +53,15 @@ select = [
     "I",   # isort
     "PYI", # pyright
     "TC",  # type-checking
+    "TID252", # absolute imports only
 ]
 exclude = ["*.ipynb"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.uv.sources]
 perlin-numpy = { git = "https://github.com/pvigier/perlin-numpy" }

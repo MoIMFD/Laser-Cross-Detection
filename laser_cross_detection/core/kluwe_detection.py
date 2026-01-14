@@ -10,9 +10,9 @@ import scipy
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-from ..utils import image_utils
-from .detection_abc import DetectionMethodABC
-from .hess_normal_line import ComplexHessLine
+from laser_cross_detection.core.detection_abc import DetectionMethodABC
+from laser_cross_detection.core.hess_normal_line import ComplexHessLine
+from laser_cross_detection.utils import image_utils
 
 
 class AngleSpaceDimension(NamedTuple):

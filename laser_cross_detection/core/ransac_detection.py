@@ -9,8 +9,8 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
-from . import ComplexHessLine
-from .detection_abc import DetectionMethodABC
+from laser_cross_detection.core import ComplexHessLine
+from laser_cross_detection.core.detection_abc import DetectionMethodABC
 
 
 class Ransac(DetectionMethodABC):

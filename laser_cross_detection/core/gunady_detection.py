@@ -8,8 +8,8 @@ import scipy.optimize as sopt
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-from .detection_abc import DetectionMethodABC
-from .hess_normal_line import HessNormalLine
+from laser_cross_detection.core.detection_abc import DetectionMethodABC
+from laser_cross_detection.core.hess_normal_line import HessNormalLine
 
 
 class Gunady(DetectionMethodABC):

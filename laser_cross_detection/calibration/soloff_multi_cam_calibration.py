@@ -10,7 +10,9 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 if TYPE_CHECKING:
-    from .soloff_cam_calibration import SoloffCamCalibration
+    from laser_cross_detection.calibration.soloff_cam_calibration import (
+        SoloffCamCalibration,
+    )
 
 
 @dataclass

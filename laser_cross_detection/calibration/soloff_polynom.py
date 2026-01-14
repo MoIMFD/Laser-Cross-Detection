@@ -9,7 +9,7 @@ import scipy.optimize as sopt
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-from .polynom_basis import PolynomialBasis
+from laser_cross_detection.calibration.polynom_basis import PolynomialBasis
 
 
 @dataclass

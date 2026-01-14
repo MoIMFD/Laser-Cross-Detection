@@ -10,7 +10,7 @@ import numpy as np
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
-from .soloff_polynom import SoloffPolynom
+from laser_cross_detection.calibration.soloff_polynom import SoloffPolynom
 
 if TYPE_CHECKING:
     from collections.abc import Callable

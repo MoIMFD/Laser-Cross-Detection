@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .test_image_generator import (
+from laser_cross_detection.test.test_image_generator import (
     BeamImageGenerator,
     make_beam_image,
     make_noisefree_image,

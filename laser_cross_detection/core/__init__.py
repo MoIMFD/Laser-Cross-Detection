@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from .gunady_detection import Gunady
-from .hess_normal_line import ComplexHessLine, HessNormalLine
-from .hough_detection import Hough
-from .kluwe_detection import Kluwe
-from .ransac_detection import Ransac
-from .template_detection import TemplateMatching
+from laser_cross_detection.core.gunady_detection import Gunady
+from laser_cross_detection.core.hess_normal_line import ComplexHessLine, HessNormalLine
+from laser_cross_detection.core.hough_detection import Hough
+from laser_cross_detection.core.kluwe_detection import Kluwe
+from laser_cross_detection.core.ransac_detection import Ransac
+from laser_cross_detection.core.template_detection import TemplateMatching
 
 __all__ = [
     "HessNormalLine",

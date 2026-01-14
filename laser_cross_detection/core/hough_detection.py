@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import KMeans
 
-from .detection_abc import DetectionMethodABC
-from .hess_normal_line import ComplexHessLine
+from laser_cross_detection.core.detection_abc import DetectionMethodABC
+from laser_cross_detection.core.hess_normal_line import ComplexHessLine
 
 PI = np.pi
 
