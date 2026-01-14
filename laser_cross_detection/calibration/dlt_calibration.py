@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 
 
@@ -15,17 +17,19 @@ class DLT:  # Direct Linear Transformation
         xyz: coordinates in the object 3D space.
         uv: coordinates in the image 2D space.
 
-        The coordinates (x,y,z and u,v) are given as columns and the different points as rows.
+        The coordinates (x,y,z and u,v) are given as columns and the different points
+        as rows.
 
         There must be at least 6 calibration points for the 3D DLT.
 
         Output
         ------
         H: camera projection matrix.
-        err: error of the DLT (mean residual of the DLT transformation in units of camera coordinates).
+        err: error of the DLT (mean residual of the DLT transformation in units of
+        camera coordinates).
         """
         if nd != 3:
-            raise ValueError("%dD DLT unsupported." % (nd))
+            raise ValueError(f"{nd:d}D DLT unsupported.")
 
         # Converting all variables to numpy array
         xyz = np.asarray(xyz)
@@ -41,25 +45,27 @@ class DLT:  # Direct Linear Transformation
         # Validating the parameters:
         if uv.shape[0] != n:
             raise ValueError(
-                "Object (%d points) and image (%d points) have different number of points."
-                % (n, uv.shape[0])
+                f"Object ({n:d} points) and image "
+                f"({uv.shape[0]:d} points) have different number of points."
             )
 
         if xyz.shape[1] != 3:
             raise ValueError(
-                "Incorrect number of coordinates (%d) for %dD DLT (it should be %d)."
-                % (xyz.shape[1], nd, nd)
+                f"Incorrect number of coordinates ({xyz.shape[1]:d}) "
+                f"for {nd:d}D DLT (it should be {nd:d})."
             )
 
         if n < 6:
             raise ValueError(
-                "%dD DLT requires at least %d calibration points. Only %d points were entered."
-                % (nd, 2 * nd, n)
+                f"{nd:d}D DLT requires at least {2 * nd:d} "
+                f"calibration points. Only {n:d} points were entered."
             )
 
-        # Normalize the data to improve the DLT quality (DLT is dependent of the system of coordinates).
+        # Normalize the data to improve the DLT quality (DLT is dependent of
+        # the system of coordinates).
         # This is relevant when there is a considerable perspective distortion.
-        # Normalization: mean position at origin and mean distance equals to 1 at each direction.
+        # Normalization: mean position at origin and mean distance equals to
+        # 1 at each direction.
         Txyz, xyzn = DLT.normalization(nd, xyz)
         Tuv, uvn = DLT.normalization(2, uv)
 
@@ -85,7 +91,8 @@ class DLT:  # Direct Linear Transformation
         # print(f"H\n{H}\n")
 
         # Denormalization
-        # pinv: Moore-Penrose pseudo-inverse of a matrix, generalized inverse of a matrix using its SVD
+        # pinv: Moore-Penrose pseudo-inverse of a matrix, generalized inverse of a
+        # matrix using its SVD
         H = np.dot(np.dot(np.linalg.pinv(Tuv), H), Txyz)
         # print(f"H\n{H}\n")
         H = H / H[-1, -1]
@@ -93,7 +100,8 @@ class DLT:  # Direct Linear Transformation
         L = H.flatten()
         # print(f"L\n{L}\n")
 
-        # Mean error of the DLT (mean residual of the DLT transformation in units of camera coordinates):
+        # Mean error of the DLT (mean residual of the DLT transformation in units
+        # of camera coordinates):
         uv2 = np.dot(H, np.concatenate((xyz.T, np.ones((1, xyz.shape[0])))))
         uv2 = uv2 / uv2[2, :]
         # Mean distance:
@@ -104,7 +112,8 @@ class DLT:  # Direct Linear Transformation
 
     @staticmethod
     def compute_multiple_cams(c3d, c2d):
-        """Camera calibration for multiple cameras by DLT using known object points and their image points.
+        """Camera calibration for multiple cameras by DLT using known object points
+        and their image points.
 
         Parameters
         ----------
@@ -118,8 +127,8 @@ class DLT:  # Direct Linear Transformation
         Hs : list
             list of camera calibration matrices according to cam num in c2d.
         errs : list
-            list of errors of the DLT (mean residual of the DLT transformation in units of camera coordinates)
-            according to cam num in c2d.
+            list of errors of the DLT (mean residual of the DLT transformation in
+            units of camera coordinates) according to cam num in c2d.
         """
         Hs, errs, errs_lists = [], [], []
         numCams = int(c2d.shape[1] / 2)
@@ -137,12 +146,14 @@ class DLT:  # Direct Linear Transformation
     @classmethod
     def normalization(self, nd, x):
         """
-        Normalization of coordinates (centroid to the origin and mean distance of sqrt(2 or 3).
+        Normalization of coordinates (centroid to the origin and mean distance
+        of sqrt(2 or 3).
 
         Input
         -----
         nd: number of dimensions, 3 here
-        x: the data to be normalized (directions at different columns and points at rows)
+        x: the data to be normalized (directions at different columns and points
+        at rows)
         Output
         ------
         Tr: the transformation matrix (translation plus scaling)

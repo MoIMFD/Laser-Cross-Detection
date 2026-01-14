@@ -1,12 +1,19 @@
-from collections import namedtuple
+from __future__ import annotations
+
 from time import time
+from typing import NamedTuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import laser_cross_detection as lcd
 
-beam_parameter = namedtuple("BeamParameter", "width rho theta")
+
+class beam_parameter(NamedTuple):
+    width: float
+    rho: float
+    theta: float
+
 
 if __name__ == "__main__":
     beam1 = beam_parameter(12, 50, 125)  # beam width, rho, beam angle
@@ -32,7 +39,8 @@ if __name__ == "__main__":
         offset=(600, 400),
     )
     print(
-        f"Created test image with intersection point at ({intersection[0]:.4f}, {intersection[1]:.4f})"
+        f"Created test image with intersection point at "
+        f"({intersection[0]:.4f}, {intersection[1]:.4f})"
     )
 
     template_center, template_offset = np.divmod(intersection, 1)
@@ -48,7 +56,8 @@ if __name__ == "__main__":
         "hough": lcd.core.Hough(),
         "gunady": lcd.core.Gunady(),
         "template_matching": lcd.core.TemplateMatching(
-            template=template, intersec_offset=template_offset
+            template=template,
+            intersec_offset=(template_offset[0].item(), template_offset[1].item()),
         ),
     }
 
@@ -57,7 +66,7 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     ax.imshow(image, cmap="gray")
     ax.axis(False)
-    colors = "red orange green blue cyan".split()
+    colors = ["red", "orange", "green", "blue", "cyan"]
     for i, (name, method) in enumerate(methods.items()):
         tic = time()
         if name == "gunady":
@@ -81,8 +90,9 @@ if __name__ == "__main__":
         print(
             f"\t{name:<18} - "
             f"({detected_intersection[0]:.4f}, {detected_intersection[1]:.4f}) - "
-            f"error: {np.linalg.norm(np.subtract(detected_intersection, intersection)):.4f} pixel - "
-            f"took {toc - tic:.4f} ms"
+            "error: "
+            f"{np.linalg.norm(detected_intersection - intersection):.4f}"
+            f" pixel - took {toc - tic:.4f} ms"
         )
 
     ax.legend()

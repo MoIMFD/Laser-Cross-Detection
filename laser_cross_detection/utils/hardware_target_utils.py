@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import deque
 from functools import cached_property
 from itertools import product
@@ -154,7 +156,7 @@ class HardwareCalibrationTarget:
         )
 
     def _draw_region(self, regions, image):
-        if not isinstance(regions, (list, tuple)):
+        if not isinstance(regions, list | tuple):
             regions = list(regions)
         for region in regions:
             rows, cols = region.coords[:, 0], region.coords[:, 1]

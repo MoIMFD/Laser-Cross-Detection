@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as nptyping
 import scipy.optimize as sopt
 
-from .soloff_cam_calibration import SoloffCamCalibration
+if TYPE_CHECKING:
+    from .soloff_cam_calibration import SoloffCamCalibration
 
 
 @dataclass
@@ -93,8 +97,8 @@ class SoloffMultiCamCalibration:
 
             # Calculate squared reprojection errors for all cameras at once
             total_error = 0.0
-            for i, (calibration, u, v, weight) in enumerate(
-                zip(self.single_cam_calibrations, us, vs, weights)
+            for _i, (calibration, u, v, weight) in enumerate(
+                zip(self.single_cam_calibrations, us, vs, weights, strict=False)
             ):
                 # Project 3D point to camera
                 u_pred, v_pred = calibration(xyz)
@@ -218,7 +222,7 @@ class SoloffMultiCamCalibration:
 
         # Flatten observed coordinates
         uv_observed = []
-        for u, v in zip(us, vs):
+        for u, v in zip(us, vs, strict=False):
             uv_observed.extend([u, v])
         uv_observed = np.array(uv_observed)
 
@@ -286,7 +290,7 @@ class SoloffMultiCamCalibration:
             pickle.dump(self, f)
 
     @classmethod
-    def load_calibration(cls, filename: str) -> "SoloffMultiCamCalibration":
+    def load_calibration(cls, filename: str) -> SoloffMultiCamCalibration:
         """Load a multi-camera calibration from a file.
 
         Args:

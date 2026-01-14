@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .test_image_generator import (
     BeamImageGenerator,
     make_beam_image,

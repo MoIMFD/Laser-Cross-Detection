@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import time
 from dataclasses import dataclass, field
+from functools import reduce
+from typing import TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as nptyping
 
 from .soloff_polynom import SoloffPolynom
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -18,6 +25,8 @@ class SoloffCamCalibration:
     soloff_u: SoloffPolynom
     soloff_v: SoloffPolynom
     camera_id: str = "cam0"  # Added camera identifier for multi-camera systems
+    disparities_u: list[Callable] = field(default_factory=list)
+    disparities_v: list[Callable] = field(default_factory=list)
 
     # Added metadata for calibration quality assessment
     _calibration_stats: dict = field(default_factory=dict)
@@ -40,7 +49,8 @@ class SoloffCamCalibration:
             v: v image coordinates (n_points)
             soloff_type: Polynomial orders (x_order, y_order, z_order)
             camera_id: Camera identifier
-            regularization: Regularization strength for polynomial fitting (ridge regression)
+            regularization: Regularization strength for polynomial
+                fitting (ridge regression)
 
         Returns:
             SoloffCamCalibration: Calibrated camera
@@ -111,21 +121,32 @@ class SoloffCamCalibration:
         if xyz.ndim == 1 and len(xyz) == 3:
             # Single point as flat array
             xyz = xyz.reshape(1, 3)
-        elif xyz.ndim == 2:
-            if xyz.shape[0] == 3 and xyz.shape[1] != 3:
-                # Shape (3,n) - transpose to (n,3)
-                xyz = xyz.T
+        elif xyz.ndim == 2 and xyz.shape[0] == 3 and xyz.shape[1] != 3:
+            # Shape (3,n) - transpose to (n,3)
+            xyz = xyz.T
 
         # Compute projections
         u = self.soloff_u(xyz)
         v = self.soloff_v(xyz)
+
+        if self.disparities_u:
+            disparity_u = reduce(
+                lambda _, interp: interp(xyz), self.disparities_u, None
+            )
+            u = u - disparity_u
+        if self.disparities_v:
+            disparity_v = reduce(
+                lambda _, interp: interp(xyz), self.disparities_v, None
+            )
+            v = v - disparity_v
 
         return u, v
 
     def reprojection_error(
         self, xyz: nptyping.NDArray, u: nptyping.NDArray, v: nptyping.NDArray
     ) -> nptyping.NDArray:
-        """Calculate reprojection error for given 3D points and their measured 2D coordinates.
+        """Calculate reprojection error for given 3D points and their measured
+        2D coordinates.
 
         Args:
             xyz: 3D world coordinates
@@ -158,7 +179,8 @@ class SoloffCamCalibration:
             f"Total RMSE: {s.get('rmse_total', 0):.3f} pixels",
             f"Maximum error: {s.get('max_error', 0):.3f} pixels",
             f"Median error: {s.get('median_error', 0):.3f} pixels",
-            f"Number of terms: u={s.get('num_terms_u', 0)}, v={s.get('num_terms_v', 0)}",
+            f"Number of terms: u={s.get('num_terms_u', 0)}, "
+            f"v={s.get('num_terms_v', 0)}",
             f"Calibration time: {s.get('calibration_time', 0):.3f} seconds",
         ]
         return "\n".join(report)

@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import pickle
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def calculate_distance(p1, p2):

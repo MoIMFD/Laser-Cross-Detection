@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -133,7 +134,7 @@ class HessNormalLine:
         return np.array([np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)])
 
     def plot_slope(self, axis, *args, **kwds):
-        return axis.axline(self.normal_point, slope=self.slope, *args, **kwds)
+        return axis.axline(self.normal_point, slope=self.slope, **kwds)
 
     def interscet_nplinalg(self, other) -> nptyping.NDArray:
         """Calculate the intersection of two instances solving the linear
@@ -355,7 +356,7 @@ class ComplexHessLine:
         return cls.from_distance_angle(distance, angle, center=center)
 
     @classmethod
-    def from_averaged_lines(cls, lines: List["ComplexHessLine"]):
+    def from_averaged_lines(cls, lines: list[ComplexHessLine]):
         if not lines:
             raise ValueError("Cannot calculate average of empty line list")
 
@@ -380,7 +381,7 @@ class ComplexHessLine:
         return cls(z_avg, center=centers[0])
 
     def plot_slope(self, axis, *args, **kwds):
-        return axis.axline(self.normal_point, slope=self.slope, *args, **kwds)
+        return axis.axline(self.normal_point, slope=self.slope, **kwds)
 
     def intersect(self, other):
         """Calculate intersection point with another ComplexHessLine or subclass"""
@@ -392,7 +393,8 @@ class ComplexHessLine:
         # Check if centers match
         if not np.allclose(self.center, other.center):
             raise ValueError(
-                f"Lines must share the same center for intersection calculation. Line1 ({self.center}), Line2 ({other.center})"
+                "Lines must share the same center for intersection calculation. "
+                f"Line1 ({self.center}), Line2 ({other.center})"
             )
 
         # Extract angles and ensure they're normalized to [0, 2π)

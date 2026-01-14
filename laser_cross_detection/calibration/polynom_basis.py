@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from itertools import combinations_with_replacement
 
 import numpy as np
@@ -6,7 +8,8 @@ import numpy.typing as nptyping
 
 class PolynomialBasis:
     """
-    A class to handle multivariate polynomial basis functions using NumPy's polynomial capabilities.
+    A class to handle multivariate polynomial basis functions using NumPy's
+    polynomial capabilities.
     """
 
     def __init__(self, *orders: int):
@@ -111,7 +114,7 @@ class PolynomialBasis:
 
         return result
 
-    def get_symbolic_terms(self, var_names: list[str] = None) -> list[str]:
+    def get_symbolic_terms(self, var_names: list[str] | None = None) -> list[str]:
         """
         Get symbolic representation of each basis function.
 

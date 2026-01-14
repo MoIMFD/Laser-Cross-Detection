@@ -40,6 +40,25 @@ dev = [
     "pre-commit>=4.5.1",
 ]
 
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "I",   # isort
+    "PYI", # pyright
+    "TC",  # type-checking
+]
+exclude = ["*.ipynb"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
 [tool.uv.sources]
 perlin-numpy = { git = "https://github.com/pvigier/perlin-numpy" }
 

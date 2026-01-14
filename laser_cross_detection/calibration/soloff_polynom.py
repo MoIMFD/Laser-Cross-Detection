@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import numpy.typing as nptyping
@@ -20,7 +21,7 @@ class SoloffPolynom:
     x_order: int
     y_order: int
     z_order: int
-    a: Optional[nptyping.NDArray] = None
+    a: nptyping.NDArray | None = None
 
     def __post_init__(self):
         # Initialize the polynomial basis
@@ -79,7 +80,7 @@ class SoloffPolynom:
         # Compute polynomial value
         return design_matrix @ self.a
 
-    def fit_direct(self, xyz: nptyping.NDArray, u: nptyping.NDArray) -> "SoloffPolynom":
+    def fit_direct(self, xyz: nptyping.NDArray, u: nptyping.NDArray) -> SoloffPolynom:
         """
         Fit polynomial coefficients using direct linear solving.
 
@@ -106,7 +107,7 @@ class SoloffPolynom:
 
     def fit_regularized(
         self, xyz: nptyping.NDArray, u: nptyping.NDArray, alpha: float = 0.1
-    ) -> "SoloffPolynom":
+    ) -> SoloffPolynom:
         """
         Fit polynomial coefficients using direct linear solving.
 
@@ -123,7 +124,8 @@ class SoloffPolynom:
 
             warnings.warn(
                 f"Negative regularization parameter ({alpha}) is invalid and may cause "
-                f"numerical instability. Using abs({alpha}) instead."
+                f"numerical instability. Using abs({alpha}) instead.",
+                stacklevel=2,
             )
             alpha = abs(alpha)
 
@@ -153,7 +155,7 @@ class SoloffPolynom:
 
     def fit_curve_fit(
         self, xyz: nptyping.NDArray, u: nptyping.NDArray
-    ) -> "SoloffPolynom":
+    ) -> SoloffPolynom:
         """
         Fit polynomial coefficients using scipy's curve_fit.
 
@@ -185,7 +187,7 @@ class SoloffPolynom:
         terms = self.basis.get_symbolic_terms(["x", "y", "z"])
         result = []
 
-        for i, (term, coef) in enumerate(zip(terms, self.a)):
+        for i, (term, coef) in enumerate(zip(terms, self.a, strict=False)):
             if abs(coef) < 1e-10:  # Skip near-zero coefficients
                 continue
 
@@ -201,7 +203,7 @@ class SoloffPolynom:
 
         return " ".join(result)
 
-    def derive(self, dimension: int) -> "SoloffPolynom":
+    def derive(self, dimension: int) -> SoloffPolynom:
         """
         Compute the derivative of the polynomial with respect to a dimension.
 
@@ -239,7 +241,7 @@ class SoloffPolynom:
         deriv_poly.a = deriv_coeffs
         return deriv_poly
 
-    def integrate(self, dimension: int) -> "SoloffPolynom":
+    def integrate(self, dimension: int) -> SoloffPolynom:
         """
         Compute the indefinite integral of the polynomial with respect to a dimension.
 

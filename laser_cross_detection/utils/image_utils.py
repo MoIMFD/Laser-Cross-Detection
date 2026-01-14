@@ -1,4 +1,6 @@
-from collections import namedtuple
+from __future__ import annotations
+
+from typing import NamedTuple
 
 import cv2
 import numpy as np
@@ -6,7 +8,7 @@ import numpy.typing as nptyping
 import scipy
 import skimage
 
-ImageDimension = namedtuple("ImageDimension", "height width")
+ImageDimension = NamedTuple("ImageDimension", ["heightwidth"])
 
 
 def rotate_image(

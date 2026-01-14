@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .gunady_detection import Gunady
 from .hess_normal_line import ComplexHessLine, HessNormalLine
 from .hough_detection import Hough

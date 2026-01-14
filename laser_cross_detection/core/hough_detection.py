@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import numpy.typing as nptyping
 from skimage.transform import probabilistic_hough_line
@@ -74,8 +76,12 @@ class Hough(DetectionMethodABC):
 
         labels, _ = group_angles(angles)
 
-        lines_1 = [line for line, label in zip(hess_lines, labels) if label == 0]
-        lines_2 = [line for line, label in zip(hess_lines, labels) if label == 1]
+        lines_1 = [
+            line for line, label in zip(hess_lines, labels, strict=False) if label == 0
+        ]
+        lines_2 = [
+            line for line, label in zip(hess_lines, labels, strict=False) if label == 1
+        ]
 
         line1 = ComplexHessLine.from_averaged_lines(lines_1)
         line2 = ComplexHessLine.from_averaged_lines(lines_2)

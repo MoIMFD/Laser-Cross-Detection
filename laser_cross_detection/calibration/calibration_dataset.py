@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
-import pandas as pd
 import numpy as np
 import numpy.typing as nptyping
+import pandas as pd
 
 
 @dataclass
@@ -26,7 +28,7 @@ class CameraCalibrationSet:
         z_offset: float = 0.0,
     ):
         data = pd.read_csv(
-            calibration_path, comment="#", names="image u v x y z".split()
+            calibration_path, comment="#", names=["image", "u", "v", "x", "y", "z"]
         )
         order = np.lexsort(data[["z", "y", "x"]].values.T)
         data = data.iloc[order, :]

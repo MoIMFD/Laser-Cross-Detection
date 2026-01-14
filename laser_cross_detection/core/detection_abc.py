@@ -1,8 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-import numpy.typing as nptyping
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
 import skimage as ski
+
+if TYPE_CHECKING:
+    import numpy.typing as nptyping
 
 
 class DetectionMethodABC(ABC):

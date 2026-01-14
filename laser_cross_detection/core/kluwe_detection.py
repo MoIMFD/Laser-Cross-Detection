@@ -1,5 +1,7 @@
-from collections import namedtuple
+from __future__ import annotations
+
 from math import ceil, log, sqrt
+from typing import NamedTuple
 
 import lmfit
 import numpy as np
@@ -10,7 +12,11 @@ from ..utils import image_utils
 from .detection_abc import DetectionMethodABC
 from .hess_normal_line import ComplexHessLine
 
-AngleSpaceDimension = namedtuple("AngleSpaceDimension", "start range steps")
+
+class AngleSpaceDimension(NamedTuple):
+    start: int
+    range: int
+    steps: int
 
 
 def angle_diff(angle1: float, angle2: float) -> float:
@@ -48,7 +54,7 @@ class Kluwe(DetectionMethodABC):
         start_angle: float = 0,
         angle_range: float = 180,
         angle_steps: int = 180,
-        beam_model: lmfit.Model = lmfit.models.GaussianModel(),
+        beam_model: lmfit.Model | None = None,
         optimization_method: str = "COBYLA",
         profile_fit_method: str = "leastsq",
     ) -> None:
@@ -70,7 +76,7 @@ class Kluwe(DetectionMethodABC):
             start_angle, angle_range, angle_steps
         )
         self.angle_step_size = angle_range / angle_steps
-        self.beam_model = beam_model
+        self.beam_model = beam_model or lmfit.models.GaussianModel()
         self.optimization_method = optimization_method
         self.profile_fit_method = profile_fit_method
 
@@ -128,11 +134,12 @@ class Kluwe(DetectionMethodABC):
             res_0 = scipy.optimize.minimize(
                 fun=optimization_loss_function,
                 x0=(guess[0],),
+                # note: comma it is needed since scipy expects a one element tuple
                 bounds=[
                     (
                         guess[0] - self.angle_step_size / 2,
                         guess[0] + self.angle_step_size / 2,
-                    )  # note the comma it is needed since scipy expects a one element tuple!
+                    )
                 ],
                 args=arr,
                 method=method,
