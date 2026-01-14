@@ -6,7 +6,9 @@ from functools import reduce
 from typing import TYPE_CHECKING
 
 import numpy as np
-import numpy.typing as nptyping
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from .soloff_polynom import SoloffPolynom
 
@@ -34,9 +36,9 @@ class SoloffCamCalibration:
     @classmethod
     def from_calibration_points(
         cls,
-        xyz: nptyping.NDArray,
-        u: nptyping.NDArray,
-        v: nptyping.NDArray,
+        xyz: NDArray,
+        u: NDArray,
+        v: NDArray,
         soloff_type: tuple[int, int, int],
         camera_id: str = "cam0",
         regularization: float = 0.0,
@@ -104,9 +106,7 @@ class SoloffCamCalibration:
 
         return calibration
 
-    def __call__(
-        self, xyz: nptyping.NDArray
-    ) -> tuple[nptyping.NDArray, nptyping.NDArray]:
+    def __call__(self, xyz: NDArray) -> tuple[NDArray, NDArray]:
         """Projects 3D world coordinates to 2D image coordinates (vectorized operation).
 
         Args:
@@ -142,9 +142,7 @@ class SoloffCamCalibration:
 
         return u, v
 
-    def reprojection_error(
-        self, xyz: nptyping.NDArray, u: nptyping.NDArray, v: nptyping.NDArray
-    ) -> nptyping.NDArray:
+    def reprojection_error(self, xyz: NDArray, u: NDArray, v: NDArray) -> NDArray:
         """Calculate reprojection error for given 3D points and their measured
         2D coordinates.
 

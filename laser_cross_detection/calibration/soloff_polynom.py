@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
-import numpy.typing as nptyping
 import scipy.optimize as sopt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from .polynom_basis import PolynomialBasis
 
@@ -21,7 +24,7 @@ class SoloffPolynom:
     x_order: int
     y_order: int
     z_order: int
-    a: nptyping.NDArray | None = None
+    a: NDArray | None = None
 
     def __post_init__(self):
         # Initialize the polynomial basis
@@ -40,7 +43,7 @@ class SoloffPolynom:
                     f"Expected {len(self.basis)} coefficients, got {len(self.a)}"
                 )
 
-    def __call__(self, *args) -> nptyping.NDArray:
+    def __call__(self, *args) -> NDArray:
         """
         Evaluate the polynomial at given points.
 
@@ -50,7 +53,7 @@ class SoloffPolynom:
             - A single array of shape [n_points, 3]
 
         Returns:
-            nptyping.NDArray: Polynomial values
+            NDArray: Polynomial values
         """
         # Process input coordinates
         if len(args) == 3:
@@ -80,7 +83,7 @@ class SoloffPolynom:
         # Compute polynomial value
         return design_matrix @ self.a
 
-    def fit_direct(self, xyz: nptyping.NDArray, u: nptyping.NDArray) -> SoloffPolynom:
+    def fit_direct(self, xyz: NDArray, u: NDArray) -> SoloffPolynom:
         """
         Fit polynomial coefficients using direct linear solving.
 
@@ -106,7 +109,7 @@ class SoloffPolynom:
         return self
 
     def fit_regularized(
-        self, xyz: nptyping.NDArray, u: nptyping.NDArray, alpha: float = 0.1
+        self, xyz: NDArray, u: NDArray, alpha: float = 0.1
     ) -> SoloffPolynom:
         """
         Fit polynomial coefficients using direct linear solving.
@@ -153,9 +156,7 @@ class SoloffPolynom:
 
         return self
 
-    def fit_curve_fit(
-        self, xyz: nptyping.NDArray, u: nptyping.NDArray
-    ) -> SoloffPolynom:
+    def fit_curve_fit(self, xyz: NDArray, u: NDArray) -> SoloffPolynom:
         """
         Fit polynomial coefficients using scipy's curve_fit.
 

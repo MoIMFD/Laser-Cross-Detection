@@ -1,24 +1,26 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
-import numpy.typing as nptyping
 import skimage as ski
 from matplotlib.widgets import RectangleSelector
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from .detection_abc import DetectionMethodABC
 
 
 class TemplateMatching(DetectionMethodABC):
-    def __init__(
-        self, template: nptyping.NDArray, intersec_offset: tuple[float, float]
-    ) -> None:
+    def __init__(self, template: NDArray, intersec_offset: tuple[float, float]) -> None:
         """Detecting the intersection of two light beams in an image based
         on template matching.
 
         Args:
-            template (nptyping.NDArray): template of the intersection
+            template (NDArray): template of the intersection
             intersec_offset (Tuple[float, float]): location of the intersection
                 within the template
         """
@@ -28,11 +30,11 @@ class TemplateMatching(DetectionMethodABC):
 
     def __call__(
         self,
-        image: nptyping.NDArray,
+        image: NDArray,
         *args,
         fit_window: int | None = None,
         **kwargs,
-    ) -> nptyping.NDArray[np.float64]:
+    ) -> NDArray[np.float64]:
         """Uses the specified template to identify the intersection of two
         light beams in a new image. The process consists of the generation
         of a correlation map, finding the discrete maximum, extracting a
@@ -41,14 +43,14 @@ class TemplateMatching(DetectionMethodABC):
         2d gaussian distribution.
 
         Args:
-            image (nptyping.NDArray): _description_
+            image (NDArray): _description_
             fit_window ( int | None, optional): Number of pixels used for
                 the 2d window to fit a two dimensional gaussian to the maximum
                 of the correlation map. Defaults to None which uses
                 max(width, height) / 10 as the fit_window.
 
         Returns:
-            nptyping.NDArray[np.float64]: detected coordinates of the
+            NDArray[np.float64]: detected coordinates of the
                 intersection
         """
         image = image.copy()
@@ -90,13 +92,11 @@ class TemplateMatching(DetectionMethodABC):
     def half_template_shape(self):
         return np.divide(self.template.shape, 2)
 
-    def update_template(
-        self, template: nptyping.NDArray, intersec_offset: tuple[float, float]
-    ):
+    def update_template(self, template: NDArray, intersec_offset: tuple[float, float]):
         """Set a new template and offset
 
         Args:
-            template (nptyping.NDArray): template of the intersection
+            template (NDArray): template of the intersection
             intersec_offset (Tuple[float, float]): location of the intersection
                 within the template
 
@@ -109,16 +109,16 @@ class TemplateMatching(DetectionMethodABC):
 
     @staticmethod
     def select_template(
-        ref_image: nptyping.NDArray,
-    ) -> tuple[nptyping.NDArray, float, float]:
+        ref_image: NDArray,
+    ) -> tuple[NDArray, float, float]:
         """Static method to interactively select a template and the offset
         using matplotlib widgets.
 
         Args:
-            ref_image (nptyping.NDArray): image to select the template from
+            ref_image (NDArray): image to select the template from
 
         Returns:
-            Tuple[nptyping.NDArray, float, float]: selected template and x, y
+            Tuple[NDArray, float, float]: selected template and x, y
                 coordinates of the intersection
         """
         fig, ax = plt.subplots()

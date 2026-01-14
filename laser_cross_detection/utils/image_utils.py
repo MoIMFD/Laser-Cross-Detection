@@ -1,23 +1,28 @@
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import cv2
 import numpy as np
-import numpy.typing as nptyping
 import scipy
 import skimage
 
-ImageDimension = NamedTuple("ImageDimension", ["heightwidth"])
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
+class ImageDimension(NamedTuple):
+    height: int
+    width: int
 
 
 def rotate_image(
-    image: nptyping.NDArray, angle: float, order: int = 3, impl: str = "cv"
-) -> nptyping.NDArray:
+    image: NDArray, angle: float, order: int = 3, impl: str = "cv"
+) -> NDArray:
     """Rotates an image by an angle.
 
     Args:
-        image (nptyping.NDArray): image to rotate
+        image (NDArray): image to rotate
         angle (float): angle to rotate the image in degree
         order (int, optional): order of the interpolation scheme to use.
             Defaults to 3.
@@ -28,7 +33,7 @@ def rotate_image(
             scipy.ndimage: scipy, ndimage
 
     Returns:
-        nptyping.NDArray: image rotate by the specified amount
+        NDArray: image rotate by the specified amount
     """
     image_center = tuple(np.array(image.shape[1::-1]) / 2)
     if impl in ["cv", "cv2", "opencv", "OpenCV"]:

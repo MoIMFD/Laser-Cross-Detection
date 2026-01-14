@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from itertools import combinations_with_replacement
+from typing import TYPE_CHECKING
 
 import numpy as np
-import numpy.typing as nptyping
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 class PolynomialBasis:
@@ -59,7 +62,7 @@ class PolynomialBasis:
         """Return the power tuples for all terms."""
         return self._powers
 
-    def evaluate(self, *coords: nptyping.NDArray) -> nptyping.NDArray:
+    def evaluate(self, *coords: NDArray) -> NDArray:
         """
         Evaluate all basis functions at given coordinates.
 
@@ -87,9 +90,7 @@ class PolynomialBasis:
 
         return design_matrix
 
-    def evaluate_single_term(
-        self, term_idx: int, *coords: nptyping.NDArray
-    ) -> nptyping.NDArray:
+    def evaluate_single_term(self, term_idx: int, *coords: NDArray) -> NDArray:
         """
         Evaluate a single basis function at given coordinates.
 

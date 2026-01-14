@@ -4,8 +4,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import numpy as np
-import numpy.typing as nptyping
 import scipy.optimize as sopt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     from .soloff_cam_calibration import SoloffCamCalibration
@@ -42,9 +44,7 @@ class SoloffMultiCamCalibration:
         self.single_cam_calibrations.append(calibration)
         return self
 
-    def __call__(
-        self, xyz: nptyping.NDArray
-    ) -> list[tuple[nptyping.NDArray, nptyping.NDArray]]:
+    def __call__(self, xyz: NDArray) -> list[tuple[NDArray, NDArray]]:
         """Project 3D points to all cameras (vectorized operation).
 
         Args:
@@ -57,13 +57,13 @@ class SoloffMultiCamCalibration:
 
     def calculate_point(
         self,
-        us: list[float | nptyping.NDArray],
-        vs: list[float | nptyping.NDArray],
-        x0: nptyping.NDArray | None = None,
-        weights: nptyping.NDArray | None = None,
+        us: list[float | NDArray],
+        vs: list[float | NDArray],
+        x0: NDArray | None = None,
+        weights: NDArray | None = None,
         method: str | None = None,
         full_output: bool = False,
-    ) -> nptyping.NDArray | tuple[nptyping.NDArray, dict]:
+    ) -> NDArray | tuple[NDArray, dict]:
         """Calculate 3D position from multiple camera views with improved optimization.
 
         Args:
@@ -135,9 +135,9 @@ class SoloffMultiCamCalibration:
     def triangulate_points(
         self,
         point_correspondences: list[tuple[list[float], list[float]]],
-        initial_guess: nptyping.NDArray | None = None,
-        weights: list[nptyping.NDArray] | None = None,
-    ) -> nptyping.NDArray:
+        initial_guess: NDArray | None = None,
+        weights: list[NDArray] | None = None,
+    ) -> NDArray:
         """Triangulate multiple points from corresponding image coordinates.
 
         Args:
@@ -167,11 +167,11 @@ class SoloffMultiCamCalibration:
 
     def estimate_uncertainty(
         self,
-        point_3d: nptyping.NDArray,
+        point_3d: NDArray,
         us: list[float],
         vs: list[float],
         confidence: float = 0.95,
-    ) -> tuple[nptyping.NDArray, nptyping.NDArray]:
+    ) -> tuple[NDArray, NDArray]:
         """Estimate uncertainty of the reconstructed 3D point.
 
         Uses local Jacobian approximation to estimate uncertainty ellipsoid.

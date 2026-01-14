@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-import numpy.typing as nptyping
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 PI = np.pi
 TWO_PI = np.pi * 2
@@ -12,28 +15,26 @@ PI_HALF = np.pi / 2
 THREE_PI_HALF = 3 * np.pi / 2
 
 
-def norm_vector(v: nptyping.NDArray) -> nptyping.NDArray:
+def norm_vector(v: NDArray) -> NDArray:
     """Normalize a vector to length 1.
 
     Args:
-        v (nptyping.NDArray): vector to normalize
+        v (NDArray): vector to normalize
 
     Returns:
-        nptyping.NDArray: normalized vector
+        NDArray: normalized vector
     """
     return v / np.linalg.norm(v)
 
 
-def distance_line_point(
-    p1: nptyping.NDArray, p2: nptyping.NDArray, p: nptyping.NDArray
-) -> float:
+def distance_line_point(p1: NDArray, p2: NDArray, p: NDArray) -> float:
     """Calculates the shortest distance between a line defined by p1 and p2
     and a point p
 
     Args:
-        p1 (nptyping.NDArray): first point on line
-        p2 (nptyping.NDArray): second point on line
-        p (nptyping.NDArray): point to calculate distance from line
+        p1 (NDArray): first point on line
+        p2 (NDArray): second point on line
+        p (NDArray): point to calculate distance from line
 
     Returns:
         float: distance between line (p1, p2) and point p
@@ -118,7 +119,7 @@ class HessNormalLine:
         return cls.from_direction(p1, d, center)
 
     @property
-    def normal_point(self) -> nptyping.NDArray:
+    def normal_point(self) -> NDArray:
         return self.center + self.distance * self.normal_vector
 
     @property
@@ -126,17 +127,17 @@ class HessNormalLine:
         return np.tan(self.angle + PI_HALF)
 
     @property
-    def normal_vector(self) -> nptyping.NDArray:
+    def normal_vector(self) -> NDArray:
         return np.array([np.cos(self.angle), np.sin(self.angle)])
 
     @property
-    def direction_vector(self) -> nptyping.NDArray:
+    def direction_vector(self) -> NDArray:
         return np.array([np.cos(self.angle + PI_HALF), np.sin(self.angle + PI_HALF)])
 
     def plot_slope(self, axis, *args, **kwds):
         return axis.axline(self.normal_point, slope=self.slope, **kwds)
 
-    def interscet_nplinalg(self, other) -> nptyping.NDArray:
+    def interscet_nplinalg(self, other) -> NDArray:
         """Calculate the intersection of two instances solving the linear
         equations defining the lines. Currently both lines need
         to share the same origin.
@@ -145,14 +146,14 @@ class HessNormalLine:
             other (HessNormalLine): other instance
 
         Returns:
-            nptyping.NDArray: point of intersection
+            NDArray: point of intersection
         """
         assert all(np.isclose(self.center, other.center))
         A = np.vstack([self.normal_vector, other.normal_vector])
         r = np.array([self.distance, other.distance])
         return np.linalg.solve(A, r) + self.center
 
-    def intersect_crossprod(self, other) -> nptyping.NDArray:
+    def intersect_crossprod(self, other) -> NDArray:
         """Calculate the intersection of two instances using the method of
         cross products in homogenous coordinates. Currently both lines need
         to share the same origin.
@@ -164,7 +165,7 @@ class HessNormalLine:
             other (HessNormalLine): other instance
 
         Returns:
-            nptyping.NDArray: point of intersection
+            NDArray: point of intersection
         """
         assert all(np.isclose(self.center, other.center))
         a1 = self.normal_point
@@ -221,17 +222,17 @@ class ComplexHessLine:
         return angle if angle >= 0 else angle + TWO_PI
 
     @property
-    def normal_vector(self) -> nptyping.NDArray:
+    def normal_vector(self) -> NDArray:
         """Get the unit normal vector pointing from center to line"""
         return np.array([np.cos(self.angle), np.sin(self.angle)])
 
     @property
-    def direction_vector(self) -> nptyping.NDArray:
+    def direction_vector(self) -> NDArray:
         """Get the direction vector along the line (perpendicular to normal)"""
         return np.array([-np.sin(self.angle), np.cos(self.angle)])
 
     @property
-    def normal_point(self) -> nptyping.NDArray:
+    def normal_point(self) -> NDArray:
         """Get the point on the line closest to center"""
         return self.center + self.distance * self.normal_vector
 

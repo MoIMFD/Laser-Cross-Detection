@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import skimage as ski
 
 if TYPE_CHECKING:
-    import numpy.typing as nptyping
+    from numpy.typing import NDArray
 
 
 class DetectionMethodABC(ABC):
@@ -21,15 +21,15 @@ class DetectionMethodABC(ABC):
         pass
 
     @staticmethod
-    def binarize_image(arr: nptyping.NDArray) -> nptyping.NDArray:
+    def binarize_image(arr: NDArray) -> NDArray:
         """Preprocess an image prior to probabilistic hough transform. Image is
         blurred using Gaussian blur and binarized by thresholding.
 
         Args:
-            arr (nptyping.NDArray): image to preprocess
+            arr (NDArray): image to preprocess
 
         Returns:
-            nptyping.NDArray: preprocessed binary image
+            NDArray: preprocessed binary image
         """
 
         arr = ski.util.img_as_float(arr)

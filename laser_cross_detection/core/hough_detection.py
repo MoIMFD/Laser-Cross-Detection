@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-import numpy.typing as nptyping
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 from skimage.transform import probabilistic_hough_line
 from sklearn.cluster import KMeans
 
@@ -11,13 +15,13 @@ from .hess_normal_line import ComplexHessLine
 PI = np.pi
 
 
-def average_angles(angles: nptyping.NDArray) -> float:
+def average_angles(angles: NDArray) -> float:
     """Calculates the average angle from a list of angles. To handle the
     overflows, negative angles and other unwanted behavior, the angles
     are converted to complex numbers, averaged and transformed back.
 
     Args:
-        angles (nptyping.NDArray): list of angles in radians
+        angles (NDArray): list of angles in radians
 
     Returns:
         float: average angle in radians
@@ -41,20 +45,20 @@ class Hough(DetectionMethodABC):
 
     def __call__(
         self,
-        arr: nptyping.NDArray,
+        arr: NDArray,
         seed: int = 0,
         return_lines: bool = False,
         *args,
         **kwargs,
-    ) -> nptyping.NDArray:
+    ) -> NDArray:
         """Takes an image of two intersecting beams and returns the estimated
         point of intersection of the beams.
 
         Args:
-            arr (nptyping.NDArray): image to process
+            arr (NDArray): image to process
 
         Returns:
-            nptyping.NDArray: point of intersection (2d)
+            NDArray: point of intersection (2d)
         """
         arr = Hough.binarize_image(arr=arr)
         image_center = np.array(arr.shape[::-1]) / 2

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-import numpy.typing as nptyping
 import sklearn as sklearn
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 from scipy.sparse import csr_matrix
 
 from . import ComplexHessLine
@@ -22,20 +26,20 @@ class Ransac(DetectionMethodABC):
 
     def __call__(
         self,
-        arr: nptyping.NDArray,
+        arr: NDArray,
         return_lines: bool = False,
         slope_thresh=5,
         *args,
         **kwargs,
-    ) -> nptyping.NDArray:
+    ) -> NDArray:
         """Calculates the point of intersection of two beams in an image
         containing both.
 
         Args:
-            arr (nptyping.NDArray): image with beams
+            arr (NDArray): image with beams
 
         Returns:
-            nptyping.NDArray: point of intersection
+            NDArray: point of intersection
         """
         arr = self.binarize_image(arr)
         image_center = np.array(arr.shape[::-1]) / 2
@@ -102,19 +106,19 @@ class Ransac(DetectionMethodABC):
             return line1.intersect(line2)
 
     def __ransac(
-        self, x: nptyping.NDArray, y: nptyping.NDArray
+        self, x: NDArray, y: NDArray
     ) -> tuple[
         float,
         tuple[float, float],
-        nptyping.NDArray[np.float64],
-        nptyping.NDArray[np.float64],
+        NDArray[np.float64],
+        NDArray[np.float64],
     ]:
         """Performs ransac algorithm on a set of points and returns slope,
         intercept and points with highest residuals.
 
         Args:
-            x (nptyping.NDArray): x coordinates
-            y (nptyping.NDArray): y coordinates
+            x (NDArray): x coordinates
+            y (NDArray): y coordinates
 
         Returns:
             Tuple[float, float, List[float], List[float]]: slope, intercept,
@@ -144,12 +148,12 @@ class Ransac(DetectionMethodABC):
     # this is some fast magic to get the indices from a numpy array:
     # https://stackoverflow.com/questions/33281957/faster-alternative-to-numpy-where
 
-    def __compute_M(self, data: nptyping.NDArray) -> csr_matrix:
+    def __compute_M(self, data: NDArray) -> csr_matrix:
         cols = np.arange(data.size)
         return csr_matrix(
             (cols, (data.ravel(), cols)), shape=(data.max() + 1, data.size)
         )
 
-    def __get_indices_sparse(self, data: nptyping.NDArray) -> list[tuple[int, int]]:
+    def __get_indices_sparse(self, data: NDArray) -> list[tuple[int, int]]:
         M = self.__compute_M(data)
         return [np.unravel_index(row.data, data.shape) for row in M]

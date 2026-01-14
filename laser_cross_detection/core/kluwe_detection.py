@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from math import ceil, log, sqrt
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import lmfit
 import numpy as np
-import numpy.typing as nptyping
 import scipy
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from ..utils import image_utils
 from .detection_abc import DetectionMethodABC
@@ -82,19 +84,19 @@ class Kluwe(DetectionMethodABC):
 
     def __call__(
         self,
-        image: nptyping.NDArray,
+        image: NDArray,
         return_lines: bool = False,
         *args,
         **kwds,
-    ) -> nptyping.NDArray:
+    ) -> NDArray:
         """Calculates the point of intersection of two beams in images
         containing both beams.
 
         Args:
-            image (nptyping.NDArray): image to process
+            image (NDArray): image to process
 
         Returns:
-            nptyping.NDArray: point of intersection
+            NDArray: point of intersection
         """
         image_center = np.array(image.shape[::-1]) / 2
 
@@ -113,11 +115,11 @@ class Kluwe(DetectionMethodABC):
         else:
             return intersection
 
-    def calc_angles(self, arr: nptyping.NDArray, method="Brent") -> tuple[float, float]:
+    def calc_angles(self, arr: NDArray, method="Brent") -> tuple[float, float]:
         """Calculates the angles of two beams present in a image.
 
         Args:
-            arr (nptyping.NDArray): image containing the beams
+            arr (NDArray): image containing the beams
 
         Returns:
             Tuple[float, float]: angles of the beams in degrees
@@ -188,12 +190,12 @@ class Kluwe(DetectionMethodABC):
         else:
             raise NotImplementedError()
 
-    def calc_radius(self, arr: nptyping.NDArray, angle: float) -> float:
+    def calc_radius(self, arr: NDArray, angle: float) -> float:
         """Calculates the radius (distance from the center) of a beam with
         known angle.
 
         Args:
-            arr (nptyping.NDArray): image of the beam
+            arr (NDArray): image of the beam
             angle (float): angle of the beam in degrees
 
         Returns:
@@ -251,19 +253,17 @@ class Kluwe(DetectionMethodABC):
         peak_position = fitting_result.params["center"].value
         return peak_position
 
-    def collapse_arr(
-        self, arr: nptyping.NDArray, angle: float = 0.0
-    ) -> nptyping.NDArray:
+    def collapse_arr(self, arr: NDArray, angle: float = 0.0) -> NDArray:
         """Rotates an image by the specified amount and reduces the 2d image
         to a 1d vector by averaging aling the first axis.
 
         Args:
-            arr (nptyping.NDArray): 2d image to process
+            arr (NDArray): 2d image to process
             angle (float, optional): angle to rotate in degrees.
                 Defaults to 0.0.
 
         Returns:
-            nptyping.NDArray: 1d averaged vector
+            NDArray: 1d averaged vector
         """
 
         if angle == 0:
@@ -275,9 +275,7 @@ class Kluwe(DetectionMethodABC):
             ).flatten()
         return col
 
-    def calc_angle_space(
-        self, arr: nptyping.NDArray, offset: float = 0
-    ) -> nptyping.NDArray:
+    def calc_angle_space(self, arr: NDArray, offset: float = 0) -> NDArray:
         """Performs the collapse_arr operation on a linear space of angles.
         When the searched beams align with the start/end point of the range of
         angles, a single peak may gets splitted and creates two peaks. For this
@@ -285,12 +283,12 @@ class Kluwe(DetectionMethodABC):
         specified amount.
 
         Args:
-            arr (nptyping.NDArray): image to process
+            arr (NDArray): image to process
             offset (float, optional): offset to the angle range in degrees.
                 Defaults to 0.
 
         Returns:
-            nptyping.NDArray: accumulated result of the collapse_arr operation
+            NDArray: accumulated result of the collapse_arr operation
                 (referred to as "angle space")
         """
         angles = np.linspace(
@@ -302,7 +300,7 @@ class Kluwe(DetectionMethodABC):
         return angles, np.array([self.collapse_arr(arr, angle) for angle in angles])
 
     def estimate_global_maxima(
-        self, arr: nptyping.NDArray, wrap_length=5
+        self, arr: NDArray, wrap_length=5
     ) -> tuple[float, float]:
         """Estimating the orientation of two beams in an image to provide a
         good initial guess used as starting point for optimization. Image is
@@ -310,7 +308,7 @@ class Kluwe(DetectionMethodABC):
         first image axis are returned.
 
         Args:
-            arr (nptyping.NDArray): image to process
+            arr (NDArray): image to process
             min_angle (Union[float  |  None], optional): minimum angle between
                 the beams. Defaults to None (2 angle steps).
 
@@ -363,16 +361,14 @@ class Kluwe(DetectionMethodABC):
         return angles[unique_peaks[0]], angles[unique_peaks[1]]
 
 
-def optimization_loss_function(
-    angle: nptyping.NDArray[float], im: nptyping.NDArray
-) -> float:
+def optimization_loss_function(angle: NDArray[float], im: NDArray) -> float:
     """Cost function used for accurate estimation of the alignment of a
     straight beam in an image with the first axis of the image. Suitable for
     scipy.optimize.minimize.
 
     Args:
         angle (float): angle to rotate the image in degree
-        im (nptyping.NDArray): image to check
+        im (NDArray): image to check
 
     Returns:
         float: score of the alignment
@@ -386,14 +382,14 @@ def optimization_loss_function(
     return neg_maximum
 
 
-def optimization_loss_function_scalar(angle: float, im: nptyping.NDArray) -> float:
+def optimization_loss_function_scalar(angle: float, im: NDArray) -> float:
     """Cost function used for accurate estimation of the alignment of a
     straight beam in an image with the first axis of the image. Suitable for
     scipy.optimize.minimize_scalar.
 
     Args:
         angle (float): angle to rotate the image in degree
-        im (nptyping.NDArray): image to check
+        im (NDArray): image to check
 
     Returns:
         float: score of the alignment

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
-import numpy.typing as nptyping
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 from perlin_numpy import perlin2d
 
 from laser_cross_detection.utils.image_utils import ImageDimension
@@ -17,7 +20,7 @@ def solve_for_intersection(
     rho2: float,
     theta2: float,
     offset: tuple[float, float] = (0, 0),
-) -> nptyping.NDArray:
+) -> NDArray:
     """Solves the linear system of equations
 
         cos(theta1) x + sin(theta1) y = rho1
@@ -37,7 +40,7 @@ def solve_for_intersection(
             Defaults to (0, 0).
 
     Returns:
-        nptyping.NDArray[float, float]: x and y coordinate of the point of intersection
+        NDArray[float, float]: x and y coordinate of the point of intersection
     """
 
     # checks if lines are parallel and returns (np.nan, np.nan) in this case
@@ -50,19 +53,19 @@ def solve_for_intersection(
 
 
 def salt_and_pepper_noise(
-    image: nptyping.NDArray, s_vs_p: float, amount: float, scale: float = 1.0
-) -> nptyping.NDArray:
+    image: NDArray, s_vs_p: float, amount: float, scale: float = 1.0
+) -> NDArray:
     """Adds salt and pepper noise to an image.
 
     Args:
-        image (nptyping.NDArray): initial image
+        image (NDArray): initial image
         s_vs_p (float): ratio between salt and pepper
         amount (float): total amount of pixels to alter
         scale (float, optional): pixel value set to salt pixels (white).
             Defaults to 1.0.
 
     Returns:
-        nptyping.NDArray: copy of image with added salt and pepper noise
+        NDArray: copy of image with added salt and pepper noise
     """
     num_salt = np.ceil(amount * image.size * s_vs_p)
     salt_idx = np.random.randint(0, image.size, int(num_salt)).astype(bool)
@@ -85,7 +88,7 @@ def make_beam_image(
     rho: float,
     beam_width: float,
     scale: float = 1.0,
-) -> nptyping.NDArray[np.float64]:
+) -> NDArray[np.float64]:
     """Creates an image of with dimension width times height containing a line
     with a gaussian profile. The line is specified in Hess-Normal-Form, angle
     theta and radius rho (distance from center). The width of the beam is
@@ -104,7 +107,7 @@ def make_beam_image(
             in the range [0, 1]. Defaults to 1.0.
 
     Returns:
-        nptyping.NDArray[np.float64]: image with gaussian beam
+        NDArray[np.float64]: image with gaussian beam
     """
     x, y = np.mgrid[:width, :height]  # build coordinates
     theta = np.deg2rad(theta)
@@ -140,9 +143,7 @@ class BeamImageGenerator:
         """
         return self.dimension.height / 2, self.dimension.width / 2
 
-    def make_beam_image(
-        self, angle: float, rho: float, beam_width: float
-    ) -> nptyping.NDArray:
+    def make_beam_image(self, angle: float, rho: float, beam_width: float) -> NDArray:
         """Creates an image of a single Gaussian beam
 
         Args:
@@ -151,7 +152,7 @@ class BeamImageGenerator:
             beam_width (float): width of the beam in pixel
 
         Returns:
-            nptyping.NDArray: image with single Gaussian beam
+            NDArray: image with single Gaussian beam
         """
         return make_beam_image(
             width=self.dimension.width,
@@ -171,7 +172,7 @@ class BeamImageGenerator:
         beam_width2: float,
         gaussian_noise_level: float = 0.0,
         seed: int = 0,
-    ) -> nptyping.NDArray:
+    ) -> NDArray:
         """Creates an image with two Gaussian beams. First a single image for
         each beam is generated. Both images are combined by taking the max
         value for each pixel using np.maximum.
@@ -189,7 +190,7 @@ class BeamImageGenerator:
                 Defaults to 0.
 
         Returns:
-            nptyping.NDArray: image with two gaussian beams
+            NDArray: image with two gaussian beams
         """
         np.random.seed(seed)
         beam_image1 = self.make_beam_image(angle1, rho1, beam_width1)
@@ -205,19 +206,19 @@ class BeamImageGenerator:
 
 
 def mask_perlin_noise(
-    image: nptyping.NDArray, noise: nptyping.NDArray, threshold: float = 0.35
-) -> nptyping.NDArray:
+    image: NDArray, noise: NDArray, threshold: float = 0.35
+) -> NDArray:
     """Masks an image using a 2d Perlin noise array. The mask is defined
     by thresholding the absolute value of the Perlin noise.
 
     Args:
-        image (nptyping.NDArray): image to mask
-        noise (nptyping.NDArray): 2d Perlin noise array
+        image (NDArray): image to mask
+        noise (NDArray): 2d Perlin noise array
         threshold (float, optional): threshold value to select mask regions
             from Perlin noise array. Defaults to 0.35.
 
     Returns:
-        nptyping.NDArray: copy of image with mask applied
+        NDArray: copy of image with mask applied
     """
     image = image.copy()
     noise = noise[: image.shape[0], : image.shape[1]]
@@ -226,20 +227,18 @@ def mask_perlin_noise(
     return image
 
 
-def add_perlin_noise(
-    image: nptyping.NDArray, noise: nptyping.NDArray, threshold: float = 0.6
-) -> nptyping.NDArray:
+def add_perlin_noise(image: NDArray, noise: NDArray, threshold: float = 0.6) -> NDArray:
     """Adds Perlin noise to an image based on mask created via thresholding the
     noise at a certain value.
 
     Args:
-        image (nptyping.NDArray): image to add noise to
-        noise (nptyping.NDArray): 2d Perlin noise array
+        image (NDArray): image to add noise to
+        noise (NDArray): 2d Perlin noise array
         threshold (float, optional): threshold value to select mask regions
             from Perlin noise array. Defaults to 0.6.
 
     Returns:
-        nptyping.NDArray: copy of image with added noise
+        NDArray: copy of image with added noise
     """
     image = image.copy()
     noise = noise[: image.shape[0], : image.shape[1]]
@@ -253,7 +252,7 @@ def perlin_noise(
     shape: tuple[int, int] = (2048, 2048),
     res: tuple[int, int] = (64, 64),
     octaves: int = 5,
-) -> nptyping.NDArray[np.float64]:
+) -> NDArray[np.float64]:
     """Creates an image containing Perlin noise.
 
     Args:
@@ -267,7 +266,7 @@ def perlin_noise(
             Defaults to 5.
 
     Returns:
-        nptyping.NDArray[np.float64]: 2d array of Perlin noise
+        NDArray[np.float64]: 2d array of Perlin noise
     """
     np.random.seed(seed)
     return perlin2d.generate_fractal_noise_2d(shape, res, octaves)
@@ -286,7 +285,7 @@ def make_noisy_image(
     seed: int = 0,
     add_threshold: float = 0.6,
     mask_threshold: float = 0.35,
-) -> nptyping.NDArray[np.uint8]:
+) -> NDArray[np.uint8]:
     """Creates a noisy image of two gaussian beams.
 
     Args:
@@ -312,7 +311,7 @@ def make_noisy_image(
             Perlin noise. Defaults to 0.35.
 
     Returns:
-        nptyping.NDArray[np.uint8]: Noisy image with to gaussian beams
+        NDArray[np.uint8]: Noisy image with to gaussian beams
     """
     b = BeamImageGenerator(ImageDimension(height, width))
     image = b.make_crossing_beams(
@@ -346,7 +345,7 @@ def make_noisefree_image(
     angle2: float = 90,
     rho2: float = 0,
     beam_width2: float = 1,
-) -> nptyping.NDArray[np.uint8]:
+) -> NDArray[np.uint8]:
     """Creates a noise free image of two gaussian beams
 
     Args:
@@ -365,7 +364,7 @@ def make_noisefree_image(
             Defaults to 1.
 
     Returns:
-        nptyping.NDArray[np.uint8]: noise free image of two gaussian beams
+        NDArray[np.uint8]: noise free image of two gaussian beams
     """
     b = BeamImageGenerator(ImageDimension(height, width))
     image = b.make_crossing_beams(

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-import numpy.typing as nptyping
 import scipy.optimize as sopt
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 from .detection_abc import DetectionMethodABC
 from .hess_normal_line import HessNormalLine
@@ -21,20 +25,20 @@ class Gunady(DetectionMethodABC):
 
     def __call__(
         self,
-        arr: nptyping.NDArray,
+        arr: NDArray,
         *args,
         p01: tuple[float, float, float, float],
         p02: tuple[float, float, float, float] | None = None,
         threshold: float = 100,
         **kwargs,
-    ) -> nptyping.NDArray:
+    ) -> NDArray:
         """Estimates the intersection point of two gaussian beams in a 2d
         image by fitting gaussian beams using least squares method. The method
         is sensitive regarding starting points. p01 and p02 should be chosen
         as close as possible to the actual beam parameter.
 
         Args:
-            arr (nptyping.NDArray): image to process
+            arr (NDArray): image to process
             p01 (Tuple[float, float, float, float]): starting beam parameter
                 set for the first beam used for optimization: angle,
                 distance from center, beam width, peak intensity
@@ -47,7 +51,7 @@ class Gunady(DetectionMethodABC):
                 not belonging to the beams
 
         Returns:
-            nptyping.NDArray: 1d array containing the coordinates (x, y) of the
+            NDArray: 1d array containing the coordinates (x, y) of the
                 intersection
         """
 
@@ -56,7 +60,7 @@ class Gunady(DetectionMethodABC):
         arr[arr < threshold] = 0
 
         def fit_function(
-            xy: tuple[nptyping.NDArray, nptyping.NDArray],
+            xy: tuple[NDArray, NDArray],
             theta: float,
             rho: float,
             beam_width: float,

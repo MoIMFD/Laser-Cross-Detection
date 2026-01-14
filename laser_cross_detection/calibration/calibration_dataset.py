@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
-import numpy.typing as nptyping
 import pandas as pd
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 @dataclass
@@ -13,8 +16,8 @@ class CameraCalibrationSet:
     xyz and the repspective image coordinates (u, v)
     """
 
-    xyz: nptyping.NDArray[np.float64]
-    uv: nptyping.NDArray[np.float64]
+    xyz: NDArray[np.float64]
+    uv: NDArray[np.float64]
 
     @classmethod
     def from_path(
@@ -41,46 +44,46 @@ class CameraCalibrationSet:
         )
 
     @property
-    def x(self) -> nptyping.NDArray[np.float64]:
+    def x(self) -> NDArray[np.float64]:
         """Returns the x world coordinate
 
         Returns:
-            nptyping.NDArray[np.float64]: x world coordinate
+            NDArray[np.float64]: x world coordinate
         """
         return self.xyz[:, 0]
 
     @property
-    def y(self) -> nptyping.NDArray[np.float64]:
+    def y(self) -> NDArray[np.float64]:
         """Returns the y world coordinate
 
         Returns:
-            nptyping.NDArray[np.float64]: y world coordinate
+            NDArray[np.float64]: y world coordinate
         """
         return self.xyz[:, 1]
 
     @property
-    def z(self) -> nptyping.NDArray[np.float64]:
+    def z(self) -> NDArray[np.float64]:
         """Returns the z world coordinate
 
         Returns:
-            nptyping.NDArray[np.float64]: z world coordinate
+            NDArray[np.float64]: z world coordinate
         """
         return self.xyz[:, 2]
 
     @property
-    def u(self) -> nptyping.NDArray[np.float64]:
+    def u(self) -> NDArray[np.float64]:
         """Returns the u image coordinate
 
         Returns:
-            nptyping.NDArray[np.float64]: u image coordinate
+            NDArray[np.float64]: u image coordinate
         """
         return self.uv[:, 0]
 
     @property
-    def v(self) -> nptyping.NDArray[np.float64]:
+    def v(self) -> NDArray[np.float64]:
         """Returns the v image coordinate
 
         Returns:
-            nptyping.NDArray[np.float64]: v image coordinate
+            NDArray[np.float64]: v image coordinate
         """
         return self.uv[:, 1]
