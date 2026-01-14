@@ -45,6 +45,8 @@ dev = [
     "matplotlib>=3.10.3",
     "ruff>=0.11.11",
     "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "hypothesis>=6.150.2",
 ]
 
 [tool.ruff]
@@ -72,3 +74,14 @@ ban-relative-imports = "all"
 
 [tool.uv.sources]
 perlin-numpy = { git = "https://github.com/pvigier/perlin-numpy" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--color=yes",
+]
