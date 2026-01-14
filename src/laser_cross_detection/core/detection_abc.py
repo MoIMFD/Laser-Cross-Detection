@@ -17,7 +17,7 @@ class DetectionMethodABC(ABC):
     """
 
     @abstractmethod
-    def __call__(self, image, *args: Any, **kwds: Any) -> Any:
+    def __call__(self, image, *args: Any, **kwds: Any) -> NDArray:
         pass
 
     @staticmethod

@@ -16,8 +16,8 @@ from laser_cross_detection.utils import image_utils
 
 
 class AngleSpaceDimension(NamedTuple):
-    start: int
-    range: int
+    start: float
+    range: float
     steps: int
 
 
@@ -275,7 +275,9 @@ class Kluwe(DetectionMethodABC):
             ).flatten()
         return col
 
-    def calc_angle_space(self, arr: NDArray, offset: float = 0) -> NDArray:
+    def calc_angle_space(
+        self, arr: NDArray, offset: float = 0
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Performs the collapse_arr operation on a linear space of angles.
         When the searched beams align with the start/end point of the range of
         angles, a single peak may gets splitted and creates two peaks. For this
@@ -361,7 +363,7 @@ class Kluwe(DetectionMethodABC):
         return angles[unique_peaks[0]], angles[unique_peaks[1]]
 
 
-def optimization_loss_function(angle: NDArray[float], im: NDArray) -> float:
+def optimization_loss_function(angle: NDArray[np.floating], im: NDArray) -> float:
     """Cost function used for accurate estimation of the alignment of a
     straight beam in an image with the first axis of the image. Suitable for
     scipy.optimize.minimize.
@@ -379,7 +381,7 @@ def optimization_loss_function(angle: NDArray[float], im: NDArray) -> float:
             axis=0,
         )
     )
-    return neg_maximum
+    return neg_maximum.item()
 
 
 def optimization_loss_function_scalar(angle: float, im: NDArray) -> float:
