@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 if TYPE_CHECKING:
-    from numpy.typing import NDArray
+    from numpy.typing import ArrayLike, NDArray
 
 PI = np.pi
 TWO_PI = np.pi * 2
@@ -69,7 +69,7 @@ def get_intersect(a1, a2, b1, b2):
 class HessNormalLine:
     distance: float
     angle: float
-    center: tuple[float, float] = 0, 0
+    center: ArrayLike = (0.0, 0.0)
 
     def __post_init__(self) -> None:
         self.center = np.array(self.center)
@@ -81,11 +81,14 @@ class HessNormalLine:
             self.angle = self.angle % PI
 
     @classmethod
-    def from_degrees(cls, distance, angle, center=(0, 0)):
+    def from_degrees(cls, distance, angle, center=None) -> HessNormalLine:
+        center = center or np.zeros(2, dtype=float)
         return cls(distance, np.deg2rad(angle), center=center)
 
     @classmethod
-    def from_intercept_and_slope(cls, intercept, slope, center=(0, 0)):
+    def from_intercept_and_slope(
+        cls, intercept, slope, center=(0, 0)
+    ) -> HessNormalLine:
         """Define a line from intercept and slope. The distance is calculated
         from the triangle formed by the intercept, origin and angel (slope)."""
         angle = np.arctan(slope) - PI / 2
@@ -93,7 +96,7 @@ class HessNormalLine:
         return cls(distance, angle, center=center)
 
     @classmethod
-    def from_direction(cls, p1, direction, center=(0, 0)):
+    def from_direction(cls, p1, direction, center=(0, 0)) -> HessNormalLine:
         p2 = np.add(p1, direction)
         p1_center = np.subtract(p1, center)
 
@@ -107,13 +110,13 @@ class HessNormalLine:
         return cls(distance, angle, center=center)
 
     @classmethod
-    def from_normal(cls, normal, center=(0, 0)):
+    def from_normal(cls, normal, center=(0, 0)) -> HessNormalLine:
         direction = -normal[1], normal[0]
         point = np.add(center, normal)
         return cls.from_direction(point, direction, center)
 
     @classmethod
-    def from_two_points(cls, p1, p2, center=(0, 0)):
+    def from_two_points(cls, p1, p2, center=(0, 0)) -> HessNormalLine:
         p1, p2 = np.array(p1), np.array(p2)
         d = p2 - p1
         return cls.from_direction(p1, d, center)
@@ -189,11 +192,11 @@ class ComplexHessLine:
     """
 
     z: complex
-    center: tuple[float, float] = (0, 0)
+    center: ArrayLike = (0.0, 0.0)
 
     def __post_init__(self) -> None:
         """Initialize the object and convert center to numpy array"""
-        self.center = np.array(self.center)
+        self.center = np.asarray(self.center)
 
         # Normalize to have angle in [0, 2π) and positive distance
         angle = np.angle(self.z)
@@ -220,6 +223,11 @@ class ComplexHessLine:
         """Get the angle parameter theta in [0, 2π)"""
         angle = np.angle(self.z) % TWO_PI
         return angle if angle >= 0 else angle + TWO_PI
+
+    @property
+    def angle_deg(self) -> float:
+        """Get the angle parameter theta in [0, 360) degrees"""
+        return np.rad2deg(self.angle)
 
     @property
     def normal_vector(self) -> NDArray:
@@ -251,7 +259,7 @@ class ComplexHessLine:
         return self
 
     @classmethod
-    def from_distance_angle(cls, distance, angle, center=(0, 0)):
+    def from_distance_angle(cls, distance, angle, center=(0, 0)) -> ComplexHessLine:
         """Create line from distance and angle parameters
 
         Args:
@@ -275,13 +283,15 @@ class ComplexHessLine:
         return cls(z, center=center)
 
     @classmethod
-    def from_degrees(cls, distance, angle_deg, center=(0, 0)):
+    def from_degrees(cls, distance, angle_deg, center=(0, 0)) -> ComplexHessLine:
         """Create line from distance and angle in degrees"""
         angle = np.deg2rad(angle_deg)
         return cls.from_distance_angle(distance, angle, center=center)
 
     @classmethod
-    def from_intercept_and_slope(cls, intercept, slope, center=(0, 0)):
+    def from_intercept_and_slope(
+        cls, intercept, slope, center=(0, 0)
+    ) -> ComplexHessLine:
         """Create line from y-intercept and slope in image coordinates
 
         Args:
@@ -311,7 +321,7 @@ class ComplexHessLine:
             return cls.from_distance_angle(distance, angle, center=center)
 
     @classmethod
-    def from_two_points(cls, p1, p2, center=(0, 0)):
+    def from_two_points(cls, p1, p2, center=(0, 0)) -> ComplexHessLine:
         """Create line from two points"""
         p1, p2 = np.array(p1), np.array(p2)
         if np.all(p1 == p2):
@@ -338,7 +348,7 @@ class ComplexHessLine:
         return cls.from_distance_angle(distance, angle, center=center)
 
     @classmethod
-    def from_normal(cls, normal, center=(0, 0)):
+    def from_normal(cls, normal, center=(0, 0)) -> ComplexHessLine:
         """Create line from normal vector"""
         normal = np.array(normal)
         norm = np.linalg.norm(normal)
@@ -357,7 +367,7 @@ class ComplexHessLine:
         return cls.from_distance_angle(distance, angle, center=center)
 
     @classmethod
-    def from_averaged_lines(cls, lines: list[ComplexHessLine]):
+    def from_averaged_lines(cls, lines: list[ComplexHessLine]) -> ComplexHessLine:
         if not lines:
             raise ValueError("Cannot calculate average of empty line list")
 
