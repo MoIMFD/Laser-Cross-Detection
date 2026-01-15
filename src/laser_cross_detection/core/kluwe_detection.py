@@ -82,10 +82,32 @@ class Kluwe(DetectionMethodABC):
         self.optimization_method = optimization_method
         self.profile_fit_method = profile_fit_method
 
+    def calc_lines(self, image: NDArray) -> tuple[ComplexHessLine, ComplexHessLine]:
+        """Derive the lines from a laser cross image.
+
+        Args:
+            image: image to process
+
+        Returns:
+            tuple of two line objects
+
+        """
+        image_center = np.array(image.shape[::-1]) / 2
+
+        angle_0, angle_1 = self.calc_angles(arr=image, method=self.optimization_method)
+
+        # calculate radius
+        radius_0 = self.calc_radius(image, angle_0)
+        radius_1 = self.calc_radius(image, angle_1)
+
+        return (
+            ComplexHessLine.from_degrees(radius_0, angle_0, center=image_center),
+            ComplexHessLine.from_degrees(radius_1, angle_1, center=image_center),
+        )
+
     def __call__(
         self,
         image: NDArray,
-        return_lines: bool = False,
         *args,
         **kwds,
     ) -> NDArray:
@@ -98,22 +120,9 @@ class Kluwe(DetectionMethodABC):
         Returns:
             NDArray: point of intersection
         """
-        image_center = np.array(image.shape[::-1]) / 2
-
-        angle_0, angle_1 = self.calc_angles(arr=image, method=self.optimization_method)
-
-        # calculate radius
-        radius_0 = self.calc_radius(image, angle_0)
-        radius_1 = self.calc_radius(image, angle_1)
-
-        line0 = ComplexHessLine.from_degrees(radius_0, angle_0, center=image_center)
-        line1 = ComplexHessLine.from_degrees(radius_1, angle_1, center=image_center)
-
+        line0, line1 = self.calc_lines(image)
         intersection = line0.intersect(line1)
-        if return_lines:
-            return intersection, line0, line1
-        else:
-            return intersection
+        return intersection
 
     def calc_angles(self, arr: NDArray, method="Brent") -> tuple[float, float]:
         """Calculates the angles of two beams present in a image.
