@@ -226,7 +226,7 @@ class Kluwe(DetectionMethodABC):
         )
 
         width_at_10percent = peak_widths[0] * sqrt(log(1 / 0.1) / log(2))
-        beam_width = ceil(width_at_10percent)
+        beam_width = max(ceil(width_at_10percent), 7)
         if beam_width % 2 == 0:
             beam_width += 1
 
