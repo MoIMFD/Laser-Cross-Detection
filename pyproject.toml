@@ -85,3 +85,8 @@ addopts = [
     "--tb=short",
     "--color=yes",
 ]
+filterwarnings = [
+    # lmfit uses deprecated uncertainties API - suppress until lmfit updates
+    "ignore:AffineScalarFunc.error_components:FutureWarning",
+    "ignore:AffineScalarFunc.derivatives:FutureWarning",
+]
