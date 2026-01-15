@@ -109,7 +109,7 @@ class Kluwe(DetectionMethodABC):
         self,
         image: NDArray,
         *args,
-        **kwds,
+        **kwargs,
     ) -> NDArray:
         """Calculates the point of intersection of two beams in images
         containing both beams.
@@ -134,7 +134,7 @@ class Kluwe(DetectionMethodABC):
             Tuple[float, float]: angles of the beams in degrees
         """
         # estimate angles
-        guess = self.estimate_global_maxima(arr)
+        guess = self.guess_angles(arr)
         if method in [
             "Nelder-Mead",
             "Powell",
@@ -264,7 +264,7 @@ class Kluwe(DetectionMethodABC):
 
     def collapse_arr(self, arr: NDArray, angle: float = 0.0) -> NDArray:
         """Rotates an image by the specified amount and reduces the 2d image
-        to a 1d vector by averaging aling the first axis.
+        to a 1d vector by averaging columns.
 
         Args:
             arr (NDArray): 2d image to process
@@ -289,7 +289,7 @@ class Kluwe(DetectionMethodABC):
     ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Performs the collapse_arr operation on a linear space of angles.
         When the searched beams align with the start/end point of the range of
-        angles, a single peak may gets splitted and creates two peaks. For this
+        angles, a single peak may gets splited and creates two peaks. For this
         case the offset parameter exists which offsets the angle range by the
         specified amount.
 
@@ -308,10 +308,22 @@ class Kluwe(DetectionMethodABC):
             self.angle_space_dim.steps,
             endpoint=False,
         )
-        return angles, np.array([self.collapse_arr(arr, angle) for angle in angles])
 
-    def estimate_global_maxima(
-        self, arr: NDArray, wrap_length=5
+        from concurrent.futures import ThreadPoolExecutor
+
+        def rotate_single(args):
+            return self.collapse_arr(arr=args[0], angle=args[1])
+
+        with ThreadPoolExecutor() as executer:
+            result = list(
+                executer.map(rotate_single, [(arr, angle) for angle in angles])
+            )
+
+        return angles, np.array(result)
+
+    def guess_angles(
+        self,
+        arr: NDArray,
     ) -> tuple[float, float]:
         """Estimating the orientation of two beams in an image to provide a
         good initial guess used as starting point for optimization. Image is
@@ -320,56 +332,28 @@ class Kluwe(DetectionMethodABC):
 
         Args:
             arr (NDArray): image to process
-            min_angle (Union[float  |  None], optional): minimum angle between
-                the beams. Defaults to None (2 angle steps).
 
         Returns:
-            Tuple[float, float]: estimation of the angles of the two beams in
+            tuple[float, float]: estimation of the angles of the two beams in
                 degrees
         """
+        angles, accumulator = self.calc_angle_space(arr)
+        accumulator = accumulator**2
+        projection = np.max(accumulator, axis=1)
+        projection_wrapped = np.tile(projection, 3)
 
-        angles, angle_space = self.calc_angle_space(arr)
-        projection = np.max(angle_space, axis=1)
-        wrapped_projection = np.pad(projection, wrap_length, mode="wrap")
+        peaks, properties = scipy.signal.find_peaks(projection_wrapped, prominence=0.0)
 
-        signal_mean = np.mean(wrapped_projection)
-        signal_std = np.std(wrapped_projection)
+        mask = (peaks >= projection.size) & (peaks < 2 * projection.size)
+        peaks = peaks[mask] - projection.size
+        for key in properties:
+            properties[key] = properties[key][mask]
 
-        peaks, properties = scipy.signal.find_peaks(
-            wrapped_projection,
-            height=(signal_mean + 1.0 * signal_std, None),
-            distance=1,
-            prominence=2.0 * signal_std,
-        )
-
-        if len(peaks) < 2:
-            peaks, properties = scipy.signal.find_peaks(
-                wrapped_projection,
-                height=(signal_mean + 0.5 * signal_std, None),
-                distance=1,
-                prominence=1.0 * signal_std,
-            )
         assert len(peaks) > 1, f"Not enough peaks caught ({len(peaks)})"
-        adjusted_peaks = (peaks - wrap_length) % len(projection)
-        sorted_indices = np.argsort(-properties["prominences"])
-        ranked_peaks = adjusted_peaks[sorted_indices]
+        sorted_indices = np.argsort(properties["prominences"])
+        ranked_peaks = peaks[sorted_indices[-2:]]
 
-        # check if peaks 'wrap around'
-        unique_peaks = []
-        for peak in ranked_peaks:
-            peak_angle = angles[peak]
-            # Check if this peak is sufficiently different from already selected peaks
-            # Using our complex number-based angle_diff function
-            if all(
-                angle_diff(peak_angle, angle) >= self.angle_step_size
-                for angle in angles[unique_peaks]
-            ):
-                unique_peaks.append(peak)
-                if len(unique_peaks) >= 2:
-                    break
-
-        # print(angles[unique_peaks[0]], angles[unique_peaks[1]])
-        return angles[unique_peaks[0]], angles[unique_peaks[1]]
+        return angles[ranked_peaks]
 
 
 def optimization_loss_function(angle: NDArray[np.floating], im: NDArray) -> float:
