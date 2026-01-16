@@ -115,7 +115,8 @@ class TestDetectionMethodKluwe:
     def test_angles_guess(self, test_case: GeneratedTestCase):
         """Test if the initial guess for angle estimation is accurate."""
         detector = Kluwe()
-        guess = np.array(detector.guess_angles(test_case.image))
+        guess, properties = detector.guess_angles(test_case.image)
+        guess = guess[np.argsort(properties["prominences"])[-2:]]
         prediction = np.sort(guess % 180)
         # absolute tolerance of 2 degree
         assert_allclose(

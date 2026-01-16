@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from laser_cross_detection.core.detection_abc import DetectionMethodABC
 from laser_cross_detection.core.hess_normal_line import ComplexHessLine
-from laser_cross_detection.utils import image_utils
+from laser_cross_detection.utils.image_utils import Implementations, rotate_image
 
 
 class AngleSpaceDimension(NamedTuple):
@@ -134,7 +134,9 @@ class Kluwe(DetectionMethodABC):
             Tuple[float, float]: angles of the beams in degrees
         """
         # estimate angles
-        guess = self.guess_angles(arr)
+        guessed_angles, properties = self.guess_angles(arr)
+        sort_by_prominence = np.argsort(properties["prominences"])[::-1]
+        guess = guessed_angles[sort_by_prominence][:2]
         if method in [
             "Nelder-Mead",
             "Powell",
@@ -279,32 +281,29 @@ class Kluwe(DetectionMethodABC):
             col = np.mean(arr, axis=0).flatten()
         else:
             col = np.mean(
-                image_utils.rotate_image(image=arr, angle=angle, impl="cv2", order=1),
+                rotate_image(
+                    image=arr, angle=angle, impl=Implementations.OPENCV, order=1
+                ),
                 axis=0,
             ).flatten()
         return col
 
     def calc_angle_space(
-        self, arr: NDArray, offset: float = 0
+        self,
+        arr: NDArray,
     ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Performs the collapse_arr operation on a linear space of angles.
-        When the searched beams align with the start/end point of the range of
-        angles, a single peak may gets splited and creates two peaks. For this
-        case the offset parameter exists which offsets the angle range by the
-        specified amount.
 
         Args:
             arr (NDArray): image to process
-            offset (float, optional): offset to the angle range in degrees.
-                Defaults to 0.
 
         Returns:
             NDArray: accumulated result of the collapse_arr operation
                 (referred to as "angle space")
         """
         angles = np.linspace(
-            self.angle_space_dim.start + offset,
-            self.angle_space_dim.start + offset + self.angle_space_dim.range,
+            self.angle_space_dim.start,
+            self.angle_space_dim.start + self.angle_space_dim.range,
             self.angle_space_dim.steps,
             endpoint=False,
         )
@@ -324,7 +323,7 @@ class Kluwe(DetectionMethodABC):
     def guess_angles(
         self,
         arr: NDArray,
-    ) -> tuple[float, float]:
+    ) -> tuple[NDArray, dict[str, NDArray]]:
         """Estimating the orientation of two beams in an image to provide a
         good initial guess used as starting point for optimization. Image is
         rotated in discrete steps. Angles where the beams best align with the
@@ -349,11 +348,7 @@ class Kluwe(DetectionMethodABC):
         for key in properties:
             properties[key] = properties[key][mask]
 
-        assert len(peaks) > 1, f"Not enough peaks caught ({len(peaks)})"
-        sorted_indices = np.argsort(properties["prominences"])
-        ranked_peaks = peaks[sorted_indices[-2:]]
-
-        return angles[ranked_peaks]
+        return angles[peaks], properties
 
 
 def optimization_loss_function(angle: NDArray[np.floating], im: NDArray) -> float:
@@ -370,7 +365,7 @@ def optimization_loss_function(angle: NDArray[np.floating], im: NDArray) -> floa
     """
     neg_maximum = -np.max(
         np.mean(
-            image_utils.rotate_image(im, angle=angle[0], impl="cv2", order=1),
+            rotate_image(im, angle=angle[0], impl=Implementations.OPENCV, order=1),
             axis=0,
         )
     )
@@ -391,7 +386,7 @@ def optimization_loss_function_scalar(angle: float, im: NDArray) -> float:
     """
     neg_maximum = -np.max(
         np.mean(
-            image_utils.rotate_image(im, angle=angle, impl="cv2", order=1),
+            rotate_image(im, angle=angle, impl=Implementations.OPENCV, order=1),
             axis=0,
         )
     )
