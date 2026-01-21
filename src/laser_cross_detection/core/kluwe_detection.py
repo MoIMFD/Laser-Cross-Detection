@@ -124,19 +124,24 @@ class Kluwe(DetectionMethodABC):
         intersection = line0.intersect(line1)
         return intersection
 
-    def calc_angles(self, arr: NDArray, method="Brent") -> tuple[float, float]:
+    def calc_angles(self, arr: NDArray, method="Brent") -> NDArray[np.floating]:
         """Calculates the angles of two beams present in a image.
 
         Args:
             arr (NDArray): image containing the beams
 
         Returns:
-            Tuple[float, float]: angles of the beams in degrees
+            array of 2 angles representing the erstimated beam orientations in degrees
         """
         # estimate angles
         guessed_angles, properties = self.guess_angles(arr)
         sort_by_prominence = np.argsort(properties["prominences"])[::-1]
         guess = guessed_angles[sort_by_prominence][:2]
+        if len(guess) != 2:
+            raise RuntimeError(
+                f"Could not estimate exactly 2 angles! Found {len(guess)}. "
+                "Review the input image and consider preprocessing."
+            )
         if method in [
             "Nelder-Mead",
             "Powell",
@@ -150,8 +155,8 @@ class Kluwe(DetectionMethodABC):
                 # note: comma it is needed since scipy expects a one element tuple
                 bounds=[
                     (
-                        guess[0] - self.angle_step_size / 2,
-                        guess[0] + self.angle_step_size / 2,
+                        guess[0] - self.angle_step_size,
+                        guess[0] + self.angle_step_size,
                     )
                 ],
                 args=arr,
@@ -164,15 +169,15 @@ class Kluwe(DetectionMethodABC):
                 x0=(guess[1],),
                 bounds=[
                     (
-                        guess[1] - self.angle_step_size / 2,
-                        guess[1] + self.angle_step_size / 2,
+                        guess[1] - self.angle_step_size,
+                        guess[1] + self.angle_step_size,
                     )
                 ],
                 args=arr,
                 method=method,
             )
             angle_1 = res_1.x[0]
-            return angle_0, angle_1
+            return np.array((angle_0, angle_1))
 
         elif method in ["Brent", "Golden"]:
             res_0 = scipy.optimize.minimize_scalar(
@@ -196,7 +201,7 @@ class Kluwe(DetectionMethodABC):
                 method=method,
             )
             angle_1 = res_1.x
-            return angle_0, angle_1
+            return np.array((angle_0, angle_1))
 
         else:
             raise NotImplementedError()
