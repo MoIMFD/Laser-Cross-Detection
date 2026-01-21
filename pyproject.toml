@@ -2,12 +2,15 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatchling.build.targets.wheel]
+[tool.hatch.build.targets.sdist]
+only-include = ["src/laser_cross_detection"]
+
+[tool.hatch.build.targets.wheel]
 packages = ["src/laser_cross_detection"]
 
 [project]
 name = "laser-cross-detection"
-version = "1.0.0"
+version = "1.0.1"
 description = "This projet contains the source code for the paper 'Robust laser cross detection for non-invasive volumetric camera calibration' published in Measurement Science and Technology (DOI 10.1088/1361-6501/adcb5b)"
 readme = "README.md"
 license = "MIT"
@@ -45,6 +48,8 @@ dev = [
     "matplotlib>=3.10.3",
     "ruff>=0.11.11",
     "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "hypothesis>=6.150.2",
 ]
 
 [tool.ruff]
@@ -72,3 +77,19 @@ ban-relative-imports = "all"
 
 [tool.uv.sources]
 perlin-numpy = { git = "https://github.com/pvigier/perlin-numpy" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--color=yes",
+]
+filterwarnings = [
+    # lmfit uses deprecated uncertainties API - suppress until lmfit updates
+    "ignore:AffineScalarFunc.error_components:FutureWarning",
+    "ignore:AffineScalarFunc.derivatives:FutureWarning",
+]
