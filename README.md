@@ -55,7 +55,7 @@ To make use of the detections a calibration module `laser_cross_detection.calibr
 ### Direct Git Install
 To install from source run
 ```bash
-uv pip install git+https://gitlab.com/MoIMFD/Laser-Cross-Detection.git
+uv pip install git+https://github.com/MoIMFD/Laser-Cross-Detection.git
 ```
 using the [`uv`](https://docs.astral.sh/uv/) package manager.
 
